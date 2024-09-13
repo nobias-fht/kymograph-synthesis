@@ -3,7 +3,7 @@ if __name__ == "__main__":
     
     import matplotlib.pyplot as plt
     import numpy as np
-    import dynamics
+    from kymograph_synthesis import dynamics
     
     particle_positions = dynamics.system.gen_simulation_data(50, 100, velocity_noise_std=0.002)
     particle_positions[particle_positions > 1] = np.nan
