@@ -54,9 +54,14 @@ def gen_simulation_data(
     positions = calc_positions(initial_positions, velocities)
     existence_mask = gen_existence_mask(n_particles, n_frames, n_frames/2)
 
-    positions[~existence_mask] = np.nan
+    # TODO: refactor start offset 
+    #   (To allow particles to start at any position at any time)
+    output = np.full((n_frames, n_particles), fill_value=np.nan)
+    for i in range(n_particles):
+        particle_existance_mask = existence_mask[:, i]
+        output[particle_existance_mask, i] = positions[:np.count_nonzero(particle_existance_mask), i]
 
-    return positions
+    return output
 
 
 def calc_positions(initial_positions: NDArray, velocities: NDArray) -> NDArray:
