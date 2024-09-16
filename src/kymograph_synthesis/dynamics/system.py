@@ -52,6 +52,10 @@ def gen_simulation_data(
         initial_velocities, n_frames, noise_std=velocity_noise_std
     )
     positions = calc_positions(initial_positions, velocities)
+    existance_mask = gen_existance_mask(n_particles, n_frames, n_frames/2)
+
+    positions[~existance_mask] = np.nan
+
     return positions
 
 
@@ -76,7 +80,6 @@ def calc_positions(initial_positions: NDArray, velocities: NDArray) -> NDArray:
         first axis represents each frame and the second axis represents each particle.
     """
     return initial_positions + np.cumsum(velocities, axis=0)
-
 
 
 def gen_initial_positions(n_particles: int) -> NDArray:
@@ -164,3 +167,40 @@ def gen_velocities(
     velocities = np.tile(initial_velocities, (n_frames, 1))
     noise = rng.normal(size=velocities.shape, loc=0, scale=noise_std)
     return velocities + noise  # velocities with noise
+
+
+def decide_lifetimes(n_particles: int, expected_lifetime: float) -> NDArray[np.float_]:
+    """
+    Decide the lifetime of each particle, sampled from an exponential distribution.
+
+    Parameters
+    ----------
+    n_particles : int
+        The number of particles
+    expected_lifetime : float
+        The expected lifetime, in the unit of frames.
+    """
+    return rng.exponential(size=n_particles, scale=expected_lifetime)
+
+
+def decide_start_time(
+    n_particles: int, n_frames: int, expected_lifetime: float
+) -> NDArray[np.float_]:
+    return rng.uniform(
+        size=n_particles, low=0 - expected_lifetime, high=n_frames + expected_lifetime
+    )
+
+
+def gen_existance_mask(
+    n_particles: int, n_frames: int, expected_lifetime: float
+) -> NDArray[np.bool_]:
+    mask = np.zeros((n_frames, n_particles), dtype=bool)
+
+    start_times = decide_start_time(n_particles, n_frames, expected_lifetime).reshape(1, -1)
+    lifetimes = decide_lifetimes(n_particles, expected_lifetime).reshape(1, -1)
+
+    frame_indices, _ = np.mgrid[:n_frames, :n_particles]
+    mask[(start_times < frame_indices) & (frame_indices < (start_times + lifetimes))] = True
+
+    return mask
+
