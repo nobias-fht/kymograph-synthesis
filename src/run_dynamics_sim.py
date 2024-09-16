@@ -6,8 +6,6 @@ if __name__ == "__main__":
     from kymograph_synthesis import dynamics
     
     particle_positions = dynamics.system.gen_simulation_data(50, 100, velocity_noise_std=0.002)
-    particle_positions[particle_positions > 1] = np.nan
-    particle_positions[particle_positions < 0] = np.nan
     for i in range(particle_positions.shape[1]):
         plt.plot(particle_positions[:,i], np.arange(particle_positions.shape[0]))
     plt.gca().invert_yaxis()

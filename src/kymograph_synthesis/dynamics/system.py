@@ -61,6 +61,9 @@ def gen_simulation_data(
         particle_existance_mask = existence_mask[:, i]
         output[particle_existance_mask, i] = positions[:np.count_nonzero(particle_existance_mask), i]
 
+    output[output > 1] = np.nan
+    output[output < 0] = np.nan
+
     return output
 
 
