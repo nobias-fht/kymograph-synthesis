@@ -52,9 +52,9 @@ def gen_simulation_data(
         initial_velocities, n_frames, noise_std=velocity_noise_std
     )
     positions = calc_positions(initial_positions, velocities)
-    existance_mask = gen_existance_mask(n_particles, n_frames, n_frames/2)
+    existence_mask = gen_existence_mask(n_particles, n_frames, n_frames/2)
 
-    positions[~existance_mask] = np.nan
+    positions[~existence_mask] = np.nan
 
     return positions
 
@@ -191,7 +191,7 @@ def decide_start_time(
     )
 
 
-def gen_existance_mask(
+def gen_existence_mask(
     n_particles: int, n_frames: int, expected_lifetime: float
 ) -> NDArray[np.bool_]:
     mask = np.zeros((n_frames, n_particles), dtype=bool)
