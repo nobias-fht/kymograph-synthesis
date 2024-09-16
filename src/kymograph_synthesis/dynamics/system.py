@@ -78,7 +78,7 @@ def calc_positions(initial_positions: NDArray, velocities: NDArray) -> NDArray:
     return initial_positions + np.cumsum(velocities, axis=0)
 
 
-# TODO: offset start time instead of allowing out of path bounds
+
 def gen_initial_positions(n_particles: int) -> NDArray:
     """
     Generate the initial positions of particles along a path.
@@ -96,7 +96,7 @@ def gen_initial_positions(n_particles: int) -> NDArray:
     numpy.ndarray
         1D array containing the intitial position of each particle.
     """
-    return rng.uniform(size=n_particles, low=-0.5, high=1.5)
+    return rng.uniform(size=n_particles, low=0, high=1)
 
 
 def gen_initial_velocities(
