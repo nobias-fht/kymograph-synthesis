@@ -13,6 +13,7 @@ def gen_simulation_data(
     state_change_prob: float = 0.1,
     positive_prob: float = 0.5,
     stopped_prob: float = 0.5,
+    expected_lifetime = 1
 ) -> NDArray:
     """
     Generate the position of each particle at each frame given simulation parameters.
@@ -36,6 +37,8 @@ def gen_simulation_data(
     velocity_noise_std : float
         The standard deviation of the noise to add to the velocities, to add variance
         across frames.
+    expected_lifetime: float
+        Expected lifetime of particles as ratio of frames.
 
     Returns
     -------
@@ -58,7 +61,7 @@ def gen_simulation_data(
         stopped_prob=stopped_prob,
     )
     positions = calc_positions(initial_positions, velocities)
-    existence_mask = gen_existence_mask(n_particles, n_frames, n_frames)
+    existence_mask = gen_existence_mask(n_particles, n_frames, n_frames*expected_lifetime)
 
     # TODO: refactor start offset
     #   (To allow particles to start at any position at any time)
