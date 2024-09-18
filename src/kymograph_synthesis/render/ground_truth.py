@@ -29,7 +29,9 @@ def render_linear(
         frame_coords = space_indicies[:, i, :]
         out_of_bounds = (frame_coords < 0) | (frame_coords >= np.array(resolution).reshape(-1, 1))
         frame_coords = frame_coords[:, ~out_of_bounds.any(axis=0)]
-        space[i, *(frame_coords[x] for x in range(frame_coords.shape[0]))] = 1
+        for particle_index in range(frame_coords.shape[1]):
+            m, n = frame_coords[:, particle_index]
+            space[i, m, n] += 1
 
     return space
 

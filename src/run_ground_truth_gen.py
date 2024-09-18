@@ -9,15 +9,16 @@ if __name__ == "__main__":
         resolution=(32, 128),
         path_start=(16, 16),
         path_end=(16, 128 - 16),
-        n_particles=30,
+        n_particles=50,
         n_frames=120,
         speed_mean=1 / 120,
         speed_std=0.0001 / 120,
+    
     )
 
     # Set up the figure and axis
     fig, ax = plt.subplots()
-    im = ax.imshow(space[0], cmap='viridis', interpolation='nearest')
+    im = ax.imshow(space[0], cmap='viridis', interpolation='nearest', vmin=space.min(), vmax=space.max())
 
     # Update function for the animation
     def update(frame):
