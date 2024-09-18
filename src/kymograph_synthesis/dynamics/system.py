@@ -13,7 +13,7 @@ def gen_simulation_data(
     state_change_prob: float = 0.1,
     positive_prob: float = 0.5,
     stopped_prob: float = 0.5,
-    expected_lifetime = 1
+    expected_lifetime=1,
 ) -> NDArray:
     """
     Generate the position of each particle at each frame given simulation parameters.
@@ -47,9 +47,6 @@ def gen_simulation_data(
         first axis represents each frame and the second axis represents each particle.
     """
     initial_positions = gen_initial_positions(n_particles)
-    # velocities = gen_velocities(
-    #     initial_velocities, n_frames, noise_std=velocity_noise_std
-    # )
     velocities = gen_velocities(
         n_particles,
         n_frames,
@@ -61,7 +58,9 @@ def gen_simulation_data(
         stopped_prob=stopped_prob,
     )
     positions = calc_positions(initial_positions, velocities)
-    existence_mask = gen_existence_mask(n_particles, n_frames, n_frames*expected_lifetime)
+    existence_mask = gen_existence_mask(
+        n_particles, n_frames, n_frames * expected_lifetime
+    )
 
     # TODO: refactor start offset
     #   (To allow particles to start at any position at any time)
@@ -160,34 +159,6 @@ def gen_initial_velocities(
     return np.array(speeds) * np.array(directions)
 
 
-# def gen_velocities(
-#     initial_velocities: NDArray[np.float_], n_frames: int, noise_std: float
-# ) -> NDArray:
-#     """
-#     Generate the velocity of each particle for `n_frames`.
-
-#     Parameters
-#     ----------
-#     initial_velocities : numpy.ndarray
-#         1D float array representing the initial velocity for each particle.
-#     n_frames : int
-#         The number of frames to generate the velocity for.
-#     noise_std : float
-#         The standard deviation of the noise to add to the velocities, to add variance
-#         across frames.
-
-#     Returns
-#     -------
-#     numpy.ndarray
-#         2D array of floats containing the velocity of each particle at each frame, the
-#         first axis represents each frame and the second axis represents each particle.
-#     """
-#     # same velocity for each frame
-#     velocities = np.tile(initial_velocities, (n_frames, 1))
-#     noise = rng.normal(size=velocities.shape, loc=0, scale=noise_std)
-#     return velocities + noise  # velocities with noise
-
-
 def gen_velocities(
     n_particles: int,
     n_frames: int,
@@ -215,7 +186,6 @@ def gen_velocities(
     ]
     state_velocities = [
         np.random.lognormal(mean=speed_mu, sigma=speed_sigma, size=n + 1)
-        # np.random.normal(loc=speed_mean, scale=speed_std, size=n + 1)
         for n in n_state_changes
     ]
     velocities = np.zeros((n_frames, n_particles))
