@@ -36,6 +36,9 @@ def calc_markov_stationary_state(
     # solve
     stationary_distribution = np.linalg.lstsq(A, b, rcond=None)[0]
 
+    # not very accurate so renorming
+    stationary_distribution /= np.sum(stationary_distribution)
+
     return {key: val for key, val in zip(keys, stationary_distribution)}
 
 
@@ -86,6 +89,7 @@ def decide_initial_state(initial_state_ratios: dict[MotionStateCollection, float
         cumulative_prob += prob
         if decision_prob <= cumulative_prob:
             return state
+    print("should be unreachable")
 
 
 def create_particle_simulators(
@@ -110,7 +114,7 @@ def create_particle_simulators(
     path_start = 0 - buffer_distance
     path_end = 1 + buffer_distance
 
-    n_particles = int(np.ceil((path_end - path_start) * particle_density))
+    n_particles = int(np.round((path_end - path_start) * particle_density))
     print(f"Creating {n_particles}, particles")
 
     return [
