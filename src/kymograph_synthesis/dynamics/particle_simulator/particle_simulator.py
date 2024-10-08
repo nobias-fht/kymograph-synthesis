@@ -4,9 +4,8 @@ import numpy as np
 
 from .motion_state_collection import MotionStateCollection
 
-TransitionMatrixType = dict[
-    MotionStateCollection, dict[MotionStateCollection, float]
-]
+TransitionMatrixType = dict[MotionStateCollection, dict[MotionStateCollection, float]]
+
 
 class ParticleSimulator:
 
@@ -14,6 +13,8 @@ class ParticleSimulator:
         self,
         initial_position: float,
         initial_state: MotionStateCollection,
+        initial_intensity: float,
+        intensity_decay_rate: float,
         antero_speed_distr: Callable[[], float],
         retro_speed_distr: Callable[[], float],
         velocity_noise_distr: Callable[[], float],
@@ -30,10 +31,22 @@ class ParticleSimulator:
         self.position: float = initial_position
         self.velocity: float = self.sample_velocity()
 
+        self.initial_intensity = initial_intensity
+        self.intensity = initial_intensity
+        self.intensity_decay_rate = intensity_decay_rate
+
+        self.step_count = 0
+
     def step(self):
         # update position
         self.position += self.velocity + self._velocity_noise_distr()
-        
+        # decay intensity
+        self.intensity = self.initial_intensity * np.exp(
+            -self.intensity_decay_rate * self.step_count
+        )
+
+        self.step_count += 1
+
         # decide if switching state
         decision_prob = np.random.random()
         if decision_prob > self._state_switch_prob[self.state]:
@@ -46,7 +59,7 @@ class ParticleSimulator:
         # resample velocity
         self.velocity = self.sample_velocity()
 
-    def next_state_transition(self) -> Optional[MotionStateCollection]:
+    def next_state_transition(self) -> MotionStateCollection:
         transition_probs = self._transition_prob_matrix[self.state]
         decision_prob = np.random.random()
         cumulative_prob = 0
@@ -54,14 +67,15 @@ class ParticleSimulator:
             cumulative_prob += prob
             if decision_prob <= cumulative_prob:
                 return transition_state
+        print("Should be unreachable")
 
     def sample_velocity(self) -> float:
         match self.state:
             case MotionStateCollection.STATIONARY:
                 return 0
             case MotionStateCollection.ANTEROGRADE:
-                return self._antero_speed_distr() # TODO: make sure always pos
+                return self._antero_speed_distr()  # TODO: make sure always pos
             case MotionStateCollection.RETROGRADE:
-                return -self._retro_speed_distr() # TODO: make sure always neg
+                return -self._retro_speed_distr()  # TODO: make sure always neg
             case _:
                 raise ValueError(f"Unknown state '{self.state}'.")
