@@ -22,6 +22,11 @@ if __name__ == "__main__":
     )
     from kymograph_synthesis.render.ground_truth import render
     from kymograph_synthesis.render.static_path import LinearPath
+    from kymograph_synthesis.render.space_time_objects import (
+        SpaceTimeObject,
+        ParticleSystem,
+        StaticSimplexNoise,
+    )
 
     n_steps = 120
     particle_density = 30
@@ -33,11 +38,11 @@ if __name__ == "__main__":
     velocity_noise_mean = 0
     velocity_noise_std = 0.2e-2
 
-    intensity_mode=100
-    intensity_var=10
+    intensity_mode = 100
+    intensity_var = 10
 
-    path_start = np.array([64 - 16, 64 - 16])
-    path_end = np.array([16, 512 - 16])
+    path_start = np.array([2, 64 - 16, 64 - 16])
+    path_end = np.array([2, 16, 512 - 16])
 
     n_spatial_samples = 128
 
@@ -82,34 +87,22 @@ if __name__ == "__main__":
 
     particle_positions, particle_intensities = run_simulation(n_steps, particles)
     static_path = LinearPath(start=path_start, end=path_end)
-    plane_time_gt = render(
-        resolution=(64, 512),
-        static_path=static_path,
-        positions=particle_positions,
-        intensities=particle_intensities,
-    )
+
+    objects: list[SpaceTimeObject] = [
+        ParticleSystem.on_static_path(
+            static_path, particle_positions, particle_intensities
+        ),
+        StaticSimplexNoise(
+            scales=[5, 10], scale_weights=[1, 1], max_intensity=intensity_mode / 256
+        ),
+    ]
     z_dim = 4
-    space_time_gt = np.zeros(
-        shape=(plane_time_gt.shape[0], z_dim, *plane_time_gt.shape[1:])
-    )
-    space_time_gt[:, 2, ...] = plane_time_gt
-
-    # --- add simplex noise
-    dims = np.array([z_dim, *plane_time_gt.shape[1:]])
-    noise_scales = [5, 10]
-    background = np.zeros(dims)
-
-    for noise_scale in noise_scales:
-        xi, yi, zi = [np.arange(dim)*noise_scale/dims.max() for dim in dims]
-        opensimplex.random_seed()
-        background += opensimplex.noise3array(zi, yi, xi)
-    background = (background - background.min())/(background.max() - background.min())
-    background = background * intensity_mode/256
-
-    space_time_gt += background[np.newaxis]
+    space_time_gt = np.zeros((n_steps, z_dim, 64, 512))
+    for t in range(n_steps):
+        for object in objects:
+            object.render(t, space_time_gt[t])
 
     time_sim_list: list[NDArray] = []
-
     for i, frame in enumerate(space_time_gt):
         sim = ms.Simulation.from_ground_truth(
             frame,
@@ -135,10 +128,10 @@ if __name__ == "__main__":
         spatial_locations = linear_path(spatial_samples)
         coords = np.round(spatial_locations).astype(int)
         print(coords.shape)
-        time_sample = time_sim[t, coords[:, 0], coords[:, 1]]
+        time_sample = time_sim[t, coords[:, 1], coords[:, 2]]
         kymograph[t] = time_sample
 
-    print("background", background.min(), background.max())
+    print("background", objects[1].noise_array.min(), objects[1].noise_array.max())
 
     plt.figure()
     for i in range(particle_positions.shape[1]):

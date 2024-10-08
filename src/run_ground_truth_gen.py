@@ -71,17 +71,6 @@ if __name__ == "__main__":
         intensities=particle_intensities
     )
 
-    # space = render.render_linear(
-    #     resolution=(32, 128),
-    #     path_start=(16, 16),
-    #     # path_end=(128 - 16),
-    #     path_end=(16, 128 - 16),
-    #     n_particles=50,
-    #     n_frames=120,
-    #     speed_mean=1 / 120,
-    #     speed_std=0.0001 / 120,
-    
-    # )
     print(space.max(), space.min())
 
     # Set up the figure and axis
