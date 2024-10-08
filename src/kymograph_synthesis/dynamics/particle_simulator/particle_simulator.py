@@ -14,7 +14,7 @@ class ParticleSimulator:
         initial_position: float,
         initial_state: MotionStateCollection,
         initial_intensity: float,
-        intensity_decay_rate: float,
+        intensity_half_life: float,
         antero_speed_distr: Callable[[], float],
         retro_speed_distr: Callable[[], float],
         velocity_noise_distr: Callable[[], float],
@@ -33,19 +33,19 @@ class ParticleSimulator:
 
         self.initial_intensity = initial_intensity
         self.intensity = initial_intensity
-        self.intensity_decay_rate = intensity_decay_rate
+        self.intensity_decay_rate = np.log(2)/intensity_half_life
 
         self.step_count = 0
 
     def step(self):
+        self.step_count += 1
+
         # update position
         self.position += self.velocity + self._velocity_noise_distr()
         # decay intensity
         self.intensity = self.initial_intensity * np.exp(
             -self.intensity_decay_rate * self.step_count
         )
-
-        self.step_count += 1
 
         # decide if switching state
         decision_prob = np.random.random()

@@ -49,7 +49,7 @@ def calc_markov_transition_matrix(
     keys = list(transition_prob_matrix.keys())
     # new matrix to account for state not switching
     markov_transition_matrix = {
-        key_i: { 
+        key_i: {
             key_j: (
                 (1 - state_switch_prob[key_i])
                 if key_i == key_j
@@ -98,6 +98,10 @@ def create_particle_simulators(
     antero_speed_var: float,
     retro_speed_mode: float,
     retro_speed_var: float,
+    intensity_mode: float,
+    intensity_var: float,
+    intensity_half_life_mode: float,
+    intensity_half_life_var: float,
     velocity_noise_std: float,
     state_switch_prob: dict[MotionStateCollection, float],
     transition_prob_matrix: TransitionMatrixType,
@@ -114,6 +118,11 @@ def create_particle_simulators(
     path_start = 0 - buffer_distance
     path_end = 1 + buffer_distance
 
+    initial_intensity_distr = log_normal_distr(intensity_mode, intensity_var)
+    intensity_half_life_distr = log_normal_distr(
+        intensity_half_life_mode, intensity_half_life_var
+    )
+
     n_particles = int(np.round((path_end - path_start) * particle_density))
     print(f"Creating {n_particles}, particles")
 
@@ -123,6 +132,8 @@ def create_particle_simulators(
             initial_state=decide_initial_state(markov_stationary_state),
             antero_speed_distr=log_normal_distr(antero_speed_mode, antero_speed_var),
             retro_speed_distr=log_normal_distr(retro_speed_mode, retro_speed_var),
+            initial_intensity=initial_intensity_distr(),
+            intensity_half_life=intensity_half_life_distr(),
             velocity_noise_distr=partial(
                 np.random.normal, loc=0, scale=velocity_noise_std
             ),
@@ -138,10 +149,12 @@ def run_simulation(
 ) -> NDArray:
     n_particles = len(particle_simulators)
     positions = np.zeros((n_steps, n_particles))
+    intensities = np.zeros((n_steps, n_particles))
     for i in range(n_steps):
         print(f"Simulation step {i}")
         for j, particle in enumerate(particle_simulators):
             positions[i, j] = particle.position
+            intensities[i, j] = particle.intensity
             particle.step()
 
-    return positions
+    return positions, intensities
