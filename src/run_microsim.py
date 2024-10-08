@@ -8,34 +8,141 @@ if __name__ == "__main__":
     from kymograph_synthesis import render
     from kymograph_synthesis.render.static_path import LinearPath
 
-    n_frames = 120
-    n_particles = 50
-    path_start = (64-16, 64-16)
-    path_end = (16, 512 - 16)
+    # n_frames = 120
+    # n_particles = 50
+    # path_start = (64-16, 64-16)
+    # path_end = (16, 512 - 16)
 
-    transport = render.render_linear(
-        resolution=(64, 512),
-        path_start=path_start,
-        path_end=path_end,
-        n_particles=n_particles,
-        n_frames=n_frames,
-        speed_mean=2 / n_frames,
-        speed_std=0.1 / n_frames,
-        # speed_std=0.5 / n_frames,
-        velocity_noise_std=0.002,
-        state_change_prob=0,
-        # state_change_prob=0.05,
-        positive_prob=0.5,
-        # stopped_prob=0.5,
-        stopped_prob=0,
-        expected_lifetime=1
+    # transport = render.render_linear(
+    #     resolution=(64, 512),
+    #     path_start=path_start,
+    #     path_end=path_end,
+    #     n_particles=n_particles,
+    #     n_frames=n_frames,
+    #     speed_mean=2 / n_frames,
+    #     speed_std=0.1 / n_frames,
+    #     # speed_std=0.5 / n_frames,
+    #     velocity_noise_std=0.002,
+    #     state_change_prob=0,
+    #     # state_change_prob=0.05,
+    #     positive_prob=0.5,
+    #     # stopped_prob=0.5,
+    #     stopped_prob=0,
+    #     expected_lifetime=1
+    # )
+    # transport = transport * 100
+
+    # time_sim_list: list[NDArray] = []
+    # for i in range(transport.shape[0]):
+    #     frame = np.zeros(shape=(4, *transport.shape[1:]))
+    #     frame[2, ...] = transport[i]
+    #     sim = ms.Simulation.from_ground_truth(
+    #         frame,
+    #         scale=(0.4, 0.02, 0.02),
+    #         output_space={"downscale": 4},
+    #         # modality=ms.Confocal(),
+    #         modality=ms.Widefield(),
+    #         detector=ms.CameraCCD(qe=1, read_noise=4, bit_depth=12, offset=100),
+    #     )
+    #     optical_img = sim.optical_image()
+
+    #     digital_image = sim.digital_image(optical_img, exposure_ms=100 ,with_detector_noise=True)
+    #     print(digital_image.shape)
+    #     time_sim_list.append(digital_image.to_numpy()[0])
+    # time_sim = np.concatenate(time_sim_list)
+
+    # n_spatial_samples = 128
+    # spatial_samples = np.linspace(0, 1, n_spatial_samples)
+    # kymograph = np.zeros((n_frames, n_spatial_samples))
+    # linear_path = LinearPath(start=np.array(path_start)/4, end=np.array(path_end)/4)
+    # for i in range(n_frames):
+    #     spatial_locations = linear_path(spatial_samples)
+    #     coords = np.round(spatial_locations).astype(int)
+    #     print(coords.shape)
+    #     time_sample = time_sim[i, coords[0], coords[1]]
+    #     kymograph[i] = time_sample
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
+    
+    from kymograph_synthesis.dynamics.particle_simulator.motion_state_collection import (
+        MotionStateCollection,
     )
-    transport = transport * 100
+    from kymograph_synthesis.dynamics.system_simulator import (
+        create_particle_simulators,
+        run_simulation,
+    )
+    from kymograph_synthesis.render.ground_truth import render
+    from kymograph_synthesis.render.static_path import LinearPath
+
+    n_steps = 120
+    particle_density = 30
+
+    retro_speed_mode = 0.4e-2
+    retro_speed_var = 0
+    antero_speed_mode = 1.6e-2
+    antero_speed_var = 0
+    velocity_noise_mean = 0
+    velocity_noise_std = 0.2e-2
+
+    path_start = np.array([64-16, 64-16])
+    path_end = np.array([16, 512 - 16])
+
+    n_spatial_samples = 128
+
+    switch_prob = {
+        MotionStateCollection.ANTEROGRADE: 0.01,
+        MotionStateCollection.STATIONARY: 0.1,
+        MotionStateCollection.RETROGRADE: 0.1,
+    }
+    transition_matrix = {
+        MotionStateCollection.ANTEROGRADE: {
+            MotionStateCollection.ANTEROGRADE: 0,
+            MotionStateCollection.STATIONARY: 0.5,
+            MotionStateCollection.RETROGRADE: 0.5,
+        },
+        MotionStateCollection.STATIONARY: {
+            MotionStateCollection.ANTEROGRADE: 0.1,
+            MotionStateCollection.STATIONARY: 0,
+            MotionStateCollection.RETROGRADE: 0.9,
+        },
+        MotionStateCollection.RETROGRADE: {
+            MotionStateCollection.ANTEROGRADE: 0.1,
+            MotionStateCollection.STATIONARY: 0.9,
+            MotionStateCollection.RETROGRADE: 0,
+        },
+    }
+
+    particles = create_particle_simulators(
+        particle_density,
+        antero_speed_mode,
+        antero_speed_var,
+        retro_speed_mode,
+        retro_speed_var,
+        intensity_mode=100,
+        intensity_var=10,
+        intensity_half_life_mode=n_steps,
+        intensity_half_life_var=n_steps/4,
+        velocity_noise_std=velocity_noise_std,
+        state_switch_prob=switch_prob,
+        transition_prob_matrix=transition_matrix,
+        n_steps=n_steps,
+    )
+
+    particle_positions, particle_intensities = run_simulation(n_steps, particles)    
+    static_path = LinearPath(start=path_start, end=path_end)
+    space_gt = render(
+        resolution=(64, 512),
+        static_path=static_path,
+        positions=particle_positions,
+        intensities=particle_intensities
+    )
 
     time_sim_list: list[NDArray] = []
-    for i in range(transport.shape[0]):
-        frame = np.zeros(shape=(4, *transport.shape[1:]))
-        frame[2, ...] = transport[i]
+    for i in range(space_gt.shape[0]):
+        frame = np.zeros(shape=(4, *space_gt.shape[1:]))
+        frame[2, ...] = space_gt[i]
         sim = ms.Simulation.from_ground_truth(
             frame,
             scale=(0.4, 0.02, 0.02),
@@ -51,17 +158,23 @@ if __name__ == "__main__":
         time_sim_list.append(digital_image.to_numpy()[0])
     time_sim = np.concatenate(time_sim_list)
 
-    n_spatial_samples = 128
     spatial_samples = np.linspace(0, 1, n_spatial_samples)
-    kymograph = np.zeros((n_frames, n_spatial_samples))
+    kymograph = np.zeros((n_steps, n_spatial_samples))
     linear_path = LinearPath(start=np.array(path_start)/4, end=np.array(path_end)/4)
-    for i in range(n_frames):
+    for t in range(n_steps):
         spatial_locations = linear_path(spatial_samples)
         coords = np.round(spatial_locations).astype(int)
         print(coords.shape)
-        time_sample = time_sim[i, coords[0], coords[1]]
-        kymograph[i] = time_sample
+        time_sample = time_sim[t, coords[:, 0], coords[:, 1]]
+        kymograph[t] = time_sample
 
+    plt.figure()
+    for i in range(particle_positions.shape[1]):
+        plt.plot(particle_positions[:, i], np.arange(particle_positions.shape[0]))
+    plt.gca().invert_yaxis()
+    plt.ylabel("Time")
+    plt.xlabel("Position")
+    plt.xlim(0, 1)
 
     plt.figure()
     plt.imshow(kymograph, "gray")
