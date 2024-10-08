@@ -19,5 +19,5 @@ class LinearPath:
 
     def __call__(self, ratio: NDArray) -> NDArray:
         shape = ratio.shape
-        result = self.start.reshape(-1, 1) + np.outer(self.direction, ratio.flatten())
-        return result.reshape(self.dims, *shape)
+        result = self.start.reshape(1, -1) + np.outer(ratio.flatten(), self.direction)
+        return result.reshape(*shape, self.dims)
