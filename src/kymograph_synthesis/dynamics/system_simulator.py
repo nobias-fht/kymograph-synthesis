@@ -25,19 +25,23 @@ def calc_markov_stationary_state(
     )
     n = P.shape[0]  # n states
 
-    P_transpose = P.T
-    A = P_transpose - np.eye(n)
-    # to constrain sum of stationary state p to equal 1
-    A = np.vstack([A, np.ones(n)])
+    eigenvalues, eigenvectors = np.linalg.eig(P.T) # left eigen values
+    stationary_states = []
+    for i, eigenvalue in enumerate(eigenvalues):
+        if np.isclose(eigenvalue, 1):
+            # normalize the eigenvector corresponding to eigenvalue 1
+            stationary_vector = np.real(eigenvectors[:, i])
+            print(stationary_vector)
+            stationary_vector /= stationary_vector.sum()
+            stationary_states.append(stationary_vector)
 
-    b = np.zeros(n)
-    b = np.append(b, 1)  # same constraint as above
+    # create random linear combination of all the stationary states
+    stationary_distribution = np.zeros(n)
+    state_weights = np.random.random(len(stationary_states))
+    for state, weight in zip(stationary_states, state_weights):
+        stationary_distribution += weight * state
 
-    # solve
-    stationary_distribution = np.linalg.lstsq(A, b, rcond=None)[0]
-
-    # not very accurate so renorming
-    stationary_distribution /= np.sum(stationary_distribution)
+    stationary_distribution /= stationary_distribution.sum()
 
     return {key: val for key, val in zip(keys, stationary_distribution)}
 
