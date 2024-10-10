@@ -28,12 +28,14 @@ def calc_markov_stationary_state(
     eigenvalues, eigenvectors = np.linalg.eig(P.T) # left eigen values
     stationary_states = []
     for i, eigenvalue in enumerate(eigenvalues):
-        if np.isclose(eigenvalue, 1):
+        if np.isclose(eigenvalue, 1, atol=1e-2):
             # normalize the eigenvector corresponding to eigenvalue 1
             stationary_vector = np.real(eigenvectors[:, i])
             print(stationary_vector)
             stationary_vector /= stationary_vector.sum()
             stationary_states.append(stationary_vector)
+    if len(stationary_states) == 0:
+        raise ValueError("Stationary state not found for Markov chain.")
 
     # create random linear combination of all the stationary states
     stationary_distribution = np.zeros(n)
