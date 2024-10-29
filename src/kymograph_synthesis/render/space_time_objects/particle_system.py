@@ -20,8 +20,14 @@ class ParticleSystem:
     ):
         space_coords = static_path(path_positions)
         return cls(coords=space_coords, intensities=intensities)
+    
+    def render(self, space_time: NDArray) -> NDArray:
+        # TODO: ensure correct number of steps?
+        for t in range(space_time.shape[0]):
+            self.render_time_point(t, space_time[t])
+        return space_time
 
-    def render(self, t: int, space: NDArray) -> NDArray:
+    def render_time_point(self, t: int, space: NDArray) -> NDArray:
         for particle_idx in range(self.n_particles):
             particle_coords = self.coords[t, particle_idx]
             indices = np.round(particle_coords).astype(int)

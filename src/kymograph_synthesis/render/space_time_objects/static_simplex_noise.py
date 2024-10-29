@@ -27,7 +27,13 @@ class StaticSimplexNoise:
         self._previous_dims: Optional[NDArray[np.int_]] = None
         self.noise_array: Optional[NDArray] = None
 
-    def render(self, t: int, space: NDArray):
+    def render(self, space_time: NDArray) -> NDArray:
+        # TODO: ensure correct number of steps?
+        for t in range(space_time.shape[0]):
+            self.render_time_point(t, space_time[t])
+        return space_time
+
+    def render_time_point(self, t: int, space: NDArray):
         dims = np.array(space.shape)
         noise_array = self.get_noise(dims)
         space += noise_array * self.max_intensity
@@ -46,8 +52,9 @@ class StaticSimplexNoise:
         for scale, weight in zip(self._scales, self._scale_weights):
             noise_grid = [np.arange(dim) * scale / dims.max() for dim in reversed(dims)]
             noise_array += weight * opensimplex.noise3array(*noise_grid)
-        noise_array = (noise_array - noise_array.min()) / (
-            noise_array.max() - noise_array.min()
-        )
+        # noise_array = (noise_array - noise_array.min()) / (
+        #     noise_array.max() - noise_array.min()
+        # )
+        noise_array[noise_array < 0] = 0
         return noise_array
 
