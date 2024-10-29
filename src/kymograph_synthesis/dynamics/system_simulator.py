@@ -31,7 +31,6 @@ def calc_markov_stationary_state(
         if np.isclose(eigenvalue, 1, atol=1e-2):
             # normalize the eigenvector corresponding to eigenvalue 1
             stationary_vector = np.real(eigenvectors[:, i])
-            print(stationary_vector)
             stationary_vector /= stationary_vector.sum()
             stationary_states.append(stationary_vector)
     if len(stationary_states) == 0:
@@ -130,7 +129,6 @@ def create_particle_simulators(
     )
 
     n_particles = int(np.round((path_end - path_start) * particle_density))
-    print(f"Creating {n_particles}, particles")
 
     return [
         ParticleSimulator(
@@ -157,7 +155,6 @@ def run_simulation(
     positions = np.zeros((n_steps, n_particles))
     intensities = np.zeros((n_steps, n_particles))
     for i in range(n_steps):
-        print(f"Simulation step {i}")
         for j, particle in enumerate(particle_simulators):
             positions[i, j] = particle.position
             intensities[i, j] = particle.intensity
