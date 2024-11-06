@@ -13,12 +13,10 @@ from kymograph_synthesis.dynamics.system_simulator import (
     create_particle_simulators,
     run_simulation,
 )
-from kymograph_synthesis.render.ground_truth import render
 from kymograph_synthesis.render.static_path import LinearPath
-from kymograph_synthesis.render.space_time_objects import (
-    SpaceTimeObject,
+from kymograph_synthesis.render.fluorophore_distributions import (
     ParticleSystem,
-    StaticSimplexNoise,
+    SimplexNoise,
 )
 
 # --- simulation params
@@ -33,8 +31,8 @@ antero_speed_mode = 1.6e-2
 antero_speed_var = 0.1e-2**2
 velocity_noise_std = 0.32e-2
 
-intensity_mode = 600
-intensity_var = 100 ** 2
+intensity_mode = 200
+intensity_var = 50**2
 
 n_spatial_samples = 96
 
@@ -82,40 +80,46 @@ particle_positions, particle_intensities = run_simulation(n_steps, particles)
 # --- render ground truth
 z_dim = 16
 downscale = 4
-path_start = np.array([z_dim // 2, 64 - 16, 64 - 16])
-path_end = np.array([z_dim // 2, 16, 512 - 16])
+path_start = np.array([0.5, 0.1, 0.1])
+path_end = np.array([0.5, 0.9, 0.9])
 static_path = LinearPath(start=path_start, end=path_end)
-objects: list[SpaceTimeObject] = [
-    ParticleSystem.on_static_path(
-        static_path, particle_positions, particle_intensities
-    ),
-    StaticSimplexNoise(
-        scales=[5, 10], scale_weights=[1, 1], max_intensity=intensity_mode * 10e-5
-    ),
-]
-space_time_gt = np.zeros((n_steps, z_dim, 64, 512))
-for object in objects:
-    object.render(space_time=space_time_gt)
 
 # --- run through microsim
+ground_truth_shape = (z_dim, 64, 512)
 digital_simulation_frames: list[NDArray] = []
-for i, frame_gt in enumerate(space_time_gt):
-    sim = ms.Simulation.from_ground_truth(
-        frame_gt,
-        scale=(0.2, 0.01, 0.01),
+ground_truth_frames: list[NDArray] = []
+static_distributions = [
+    SimplexNoise(
+        scales=[5, 10], scale_weights=[1, 1], max_intensity=intensity_mode * 10e-4 / 2
+    )
+]
+for t in range(n_steps):
+    time_varying_distributions = [
+        ParticleSystem.on_static_path(
+            static_path, particle_positions[t], particle_intensities[t]
+        ),
+    ]
+    sim = ms.Simulation(
+        truth_space=ms.ShapeScaleSpace(shape=ground_truth_shape, scale=(0.02, 0.01, 0.01)),
         output_space={"downscale": downscale},
+        sample=ms.Sample(labels=static_distributions+time_varying_distributions),
         modality=ms.Widefield(),
         detector=ms.CameraCCD(qe=1, read_noise=4, bit_depth=12, offset=100),
     )
-    digital_image = sim.digital_image(exposure_ms=300, with_detector_noise=True)
+
+    ground_truth = sim.ground_truth()
+    digital_image = sim.digital_image(exposure_ms=100, with_detector_noise=True)
+    ground_truth_frames.append(ground_truth)
     digital_simulation_frames.append(digital_image)
+ground_truth = np.concatenate(ground_truth_frames)
 digital_simulation = np.concatenate(digital_simulation_frames)
+
 
 # --- create kymograph
 spatial_samples = np.linspace(0, 1, n_spatial_samples)
 kymograph = np.zeros((n_steps, n_spatial_samples))
 linear_path = LinearPath(
-    start=np.array(path_start) / downscale, end=np.array(path_end) / downscale
+    start=np.array(path_start) * ground_truth_shape / downscale, end=np.array(path_end) * ground_truth_shape / downscale
 )
 for t in range(n_steps):
     spatial_locations = linear_path(spatial_samples)
@@ -133,7 +137,7 @@ kymograph_gt_ax = fig.add_subplot(gs[:, 2])
 
 # --- digital sim animation
 digital_animation_img = digital_animation_ax.imshow(
-    digital_simulation[0, z_dim // 2 // downscale],
+    digital_simulation[0, np.round(z_dim / 2 / downscale).astype(int)],
     cmap="gray",
     interpolation="none",
     vmin=digital_simulation.min(),
@@ -142,7 +146,7 @@ digital_animation_img = digital_animation_ax.imshow(
 
 
 def update_digital_animation(frame):
-    digital_animation_img.set_array(digital_simulation[frame, z_dim // 2 // downscale])
+    digital_animation_img.set_array(digital_simulation[frame, np.round(z_dim / 2 / downscale).astype(int)])
     return digital_animation_img
 
 
@@ -153,7 +157,7 @@ digital_animation_ax.set_title("Digital particle simulation")
 
 # --- ground truth animation
 ground_truth_animation_img = ground_truth_animation_ax.imshow(
-    space_time_gt[0, z_dim // 2],
+    ground_truth[0, np.round(z_dim / 2).astype(int)],
     cmap="gray",
     interpolation="none",
     vmin=digital_simulation.min(),
@@ -162,7 +166,7 @@ ground_truth_animation_img = ground_truth_animation_ax.imshow(
 
 
 def update_ground_truth_animation(frame):
-    ground_truth_animation_img.set_array(space_time_gt[frame, z_dim // 2])
+    ground_truth_animation_img.set_array(ground_truth[frame, z_dim // 2])
     return ground_truth_animation_img
 
 
@@ -179,9 +183,11 @@ kymograph_ax.set_title("Kymograph")
 
 # --- diplay kymograph ground truth
 for i in range(particle_positions.shape[1]):
-    kymograph_gt_ax.plot(particle_positions[:, i], np.arange(particle_positions.shape[0]))
+    kymograph_gt_ax.plot(
+        particle_positions[:, i], np.arange(particle_positions.shape[0])
+    )
 kymograph_gt_ax.invert_yaxis()
-kymograph_gt_ax.set_aspect(1/kymograph.shape[1])
+kymograph_gt_ax.set_aspect(1 / kymograph.shape[1])
 kymograph_gt_ax.set_ylabel("Time")
 kymograph_gt_ax.set_xlabel("Position")
 kymograph_gt_ax.set_xlim(0, 1)
