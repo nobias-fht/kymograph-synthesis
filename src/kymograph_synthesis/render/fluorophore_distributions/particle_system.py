@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr
 from numpy.typing import NDArray
 import microsim.schema as ms
 from microsim._data_array import xrDataArray
@@ -25,9 +26,6 @@ class ParticleSystem:
         return cls(coords=space_coords, intensities=intensities)
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
-        # map coord space to render space
-        # unit_distance = max(space.shape)
-        # space_coords = self.coords * unit_distance
 
         space_coords = self.coords * np.array(space.shape).reshape(1, -1)
         indices = np.round(space_coords).astype(int)
@@ -39,7 +37,12 @@ class ParticleSystem:
         )
         indices = indices[~out_of_bounds]
 
-        space[indices[:, 0], indices[:, 1], indices[:, 2]] += self.intensities[
+        # TODO look up neatest way of vectorizing xarrays - this works tho
+        ind_along_z = xr.DataArray(indices[:, 0], dims=["new_index"])
+        ind_along_y = xr.DataArray(indices[:, 1], dims=["new_index"])
+        ind_along_x = xr.DataArray(indices[:, 2], dims=["new_index"])
+
+        space[ind_along_z, ind_along_y, ind_along_x] += self.intensities[
             ~out_of_bounds
         ]
         return space
