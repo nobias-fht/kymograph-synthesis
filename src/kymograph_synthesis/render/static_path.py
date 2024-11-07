@@ -21,3 +21,40 @@ class LinearPath:
         shape = ratio.shape
         result = self.start.reshape(1, -1) + np.outer(ratio.flatten(), self.direction)
         return result.reshape(*shape, self.dims)
+
+
+class PiecewiseLinearPath:
+
+    def __init__(self, vertices: list[NDArray]):
+        self.n_segments = len(vertices) - 1
+        self.vertices = vertices
+        self.dims = len(self.vertices[0])  # TODO: validate all vertices have same dims
+        self.linear_path_segments: list[LinearPath] = [
+            LinearPath(start=self.vertices[i], end=self.vertices[i + 1])
+            for i in range(self.n_segments)
+        ]
+        self.segment_magnitudes: NDArray[np.float_] = np.array(
+            [
+                np.linalg.norm(path_segment.end - path_segment.start, ord=2)
+                for path_segment in self.linear_path_segments
+            ]
+        )
+        self.total_length = np.sum(self.segment_magnitudes)
+        self.segment_ratio_bins = np.concatenate(
+            [np.array([0]), np.cumsum(self.segment_magnitudes) / self.total_length]
+        )
+
+    def __call__(self, ratio: NDArray) -> NDArray:
+        segment_mask = np.digitize(ratio, bins=self.segment_ratio_bins[1:], right=True)
+        result = np.zeros((*ratio.shape, self.dims))  # initialize place holder
+        for n in range(self.n_segments):
+            linear_path_segment = self.linear_path_segments[n]
+            segment_ratios = ratio[segment_mask == n]
+            # scale correctly
+            segment_ratios = (segment_ratios - self.segment_ratio_bins[n]) * (
+                self.total_length / self.segment_magnitudes[n]
+            )
+            segment_result = linear_path_segment(segment_ratios)
+            result[segment_mask == n] = segment_result
+
+        return result
