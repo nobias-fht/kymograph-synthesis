@@ -2,7 +2,7 @@ from typing import Protocol
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
-
+from scipy.interpolate import interp1d
 
 class StaticPath(Protocol):
 
@@ -58,3 +58,37 @@ class PiecewiseLinearPath:
             result[segment_mask == n] = segment_result
 
         return result
+
+class QuadraticBezierPath:
+
+    def __init__(self, points: tuple[NDArray, NDArray, NDArray]):
+        self.points = points
+        self.dims = len(points[0])
+
+    def __call__(self, ratio: NDArray) -> NDArray:
+        ratio_mapping = self.ratio_mapping(n=128)
+        t = ratio_mapping(ratio)
+        return self._bezier_func(t)
+    
+    def _bezier_func(self, t: NDArray) -> NDArray:
+        shape = t.shape
+        p0, p1, p2 = self.points
+        result = (
+            p1 
+            + np.outer((1 - t.flatten()) ** 2, (p0 - p1))
+            + np.outer(t.flatten() ** 2, (p2 - p1))
+        )
+        result.reshape(*shape, self.dims)
+        return result
+    
+    def ratio_mapping(self, n=128) -> callable[[NDArray], NDArray]:
+        lengths = self._calc_lengths(n=n)
+        x = np.concatenate([np.array([0]), np.cumsum(lengths)/np.cumsum(lengths)[-1]])
+        return interp1d(x, np.linspace(0, 1.0, n))
+    
+    def _calc_lengths(self, n=128) -> NDArray:
+        samples = np.linspace(0, 1, n)
+        coords = self._bezier_func(samples)
+        vecs = coords[1:] - coords[:-1]
+        lengths = np.linalg.norm(vecs, ord=2, axis=1)
+        return lengths
