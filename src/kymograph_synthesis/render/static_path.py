@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, Callable
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
@@ -66,6 +66,8 @@ class QuadraticBezierPath:
         self.dims = len(points[0])
 
     def __call__(self, ratio: NDArray) -> NDArray:
+        ratio[ratio < 0] = np.nan
+        ratio[ratio > 1] = np.nan
         ratio_mapping = self.ratio_mapping(n=128)
         t = ratio_mapping(ratio)
         return self._bezier_func(t)
@@ -81,7 +83,7 @@ class QuadraticBezierPath:
         result.reshape(*shape, self.dims)
         return result
     
-    def ratio_mapping(self, n=128) -> callable[[NDArray], NDArray]:
+    def ratio_mapping(self, n=128) -> Callable[[NDArray], NDArray]:
         lengths = self._calc_lengths(n=n)
         x = np.concatenate([np.array([0]), np.cumsum(lengths)/np.cumsum(lengths)[-1]])
         return interp1d(x, np.linspace(0, 1.0, n))
