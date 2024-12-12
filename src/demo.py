@@ -20,7 +20,7 @@ from kymograph_synthesis.render.fluorophore_distributions import (
 )
 
 # --- simulation params
-n_steps = 128
+n_steps = 64
 particle_density = 6
 
 # retro_speed_mode = 0.2e-2
@@ -36,26 +36,21 @@ intensity_var = 50**2
 
 n_spatial_samples = 96
 
-switch_prob = {
-    MotionStateCollection.ANTEROGRADE: 0.1,
-    MotionStateCollection.STATIONARY: 0.5,
-    MotionStateCollection.RETROGRADE: 0,
-}
 transition_matrix = {
     MotionStateCollection.ANTEROGRADE: {
-        MotionStateCollection.ANTEROGRADE: 0,
-        MotionStateCollection.STATIONARY: 1,
+        MotionStateCollection.ANTEROGRADE: 0.9,
+        MotionStateCollection.STATIONARY: 0.1,
         MotionStateCollection.RETROGRADE: 0,
     },
     MotionStateCollection.STATIONARY: {
-        MotionStateCollection.ANTEROGRADE: 1,
-        MotionStateCollection.STATIONARY: 0,
+        MotionStateCollection.ANTEROGRADE: 0.5,
+        MotionStateCollection.STATIONARY: 0.5,
         MotionStateCollection.RETROGRADE: 0,
     },
     MotionStateCollection.RETROGRADE: {
         MotionStateCollection.ANTEROGRADE: 0,
-        MotionStateCollection.STATIONARY: 1,
-        MotionStateCollection.RETROGRADE: 0,
+        MotionStateCollection.STATIONARY: 0,
+        MotionStateCollection.RETROGRADE: 1,
     },
 }
 
@@ -71,8 +66,7 @@ particles = create_particle_simulators(
     intensity_half_life_mode=n_steps,
     intensity_half_life_var=n_steps / 4,
     velocity_noise_std=velocity_noise_std,
-    state_switch_prob=switch_prob,
-    transition_prob_matrix=transition_matrix,
+    transition_matrix=transition_matrix,
     n_steps=n_steps,
 )
 particle_positions, particle_intensities = run_simulation(n_steps, particles)

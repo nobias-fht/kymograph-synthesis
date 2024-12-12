@@ -47,25 +47,6 @@ def calc_markov_stationary_state(
     return {key: val for key, val in zip(keys, stationary_distribution)}
 
 
-def calc_markov_transition_matrix(
-    state_switch_prob: dict[MotionStateCollection, float],
-    transition_prob_matrix: TransitionMatrixType,
-) -> TransitionMatrixType:
-    keys = list(transition_prob_matrix.keys())
-    # new matrix to account for state not switching
-    markov_transition_matrix = {
-        key_i: {
-            key_j: (
-                (1 - state_switch_prob[key_i])
-                if key_i == key_j
-                else transition_prob_matrix[key_i][key_j] * state_switch_prob[key_i]
-            )
-            for key_j in keys
-        }
-        for key_i in keys
-    }
-    return markov_transition_matrix
-
 
 def log_normal_params(mode: float, var: float):
 
@@ -108,15 +89,11 @@ def create_particle_simulators(
     intensity_half_life_mode: float,
     intensity_half_life_var: float,
     velocity_noise_std: float,
-    state_switch_prob: dict[MotionStateCollection, float],
-    transition_prob_matrix: TransitionMatrixType,
+    transition_matrix: TransitionMatrixType,
     n_steps: int = 256,
 ) -> list[ParticleSimulator]:
 
-    markov_matrix = calc_markov_transition_matrix(
-        state_switch_prob, transition_prob_matrix
-    )
-    markov_stationary_state = calc_markov_stationary_state(markov_matrix)
+    markov_stationary_state = calc_markov_stationary_state(transition_matrix)
 
     approx_travel_distance = max(antero_speed_mode, retro_speed_mode) * n_steps
     buffer_distance = approx_travel_distance * 1.5
@@ -141,8 +118,7 @@ def create_particle_simulators(
             velocity_noise_distr=partial(
                 np.random.normal, loc=0, scale=velocity_noise_std
             ),
-            state_switch_prob=state_switch_prob,
-            transition_prob_matrix=transition_prob_matrix,
+            transition_matrix=transition_matrix,
         )
         for _ in range(n_particles)
     ]

@@ -32,6 +32,7 @@ class LinearPath:
 class PiecewiseLinearPath:
 
     def __init__(self, vertices: list[NDArray]):
+        # TODO: rename variable to be more cohesive with piecewise bezier path
         self.n_segments = len(vertices) - 1
         self.vertices = vertices
         self.dims = len(self.vertices[0])  # TODO: validate all vertices have same dims
