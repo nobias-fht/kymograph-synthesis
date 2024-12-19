@@ -6,32 +6,6 @@ from scipy.interpolate import interp1d
 
 from .render.static_path import StaticPath
 
-
-def inter_pixel_interp(
-    spatial_samples: NDArray,
-    pixel_indices: NDArray,
-    values: NDArray,
-    interpolation="cubic",
-):
-    unique, unique_indices = np.unique(pixel_indices, axis=0, return_index=True)
-
-    # placeholder
-    n_unique = len(unique)
-    averaged_spatial_samples = np.zeros(n_unique)
-    for i, val in enumerate(unique):
-        averaged_spatial_samples[i] = np.mean(
-            spatial_samples[(pixel_indices == val).all(axis=1)]
-        )
-
-    interp_f = interp1d(
-        averaged_spatial_samples,
-        values[unique_indices],
-        kind=interpolation,
-        fill_value="extrapolate",
-    )
-    return interp_f(spatial_samples)
-
-
 def create_kymograph(
     image_stack: NDArray,
     sample_path: StaticPath,
@@ -76,3 +50,32 @@ def create_kymograph(
                 spatial_samples, indices, sample, interpolation=interpolation
             )
         kymograph[t] = sample
+
+
+def inter_pixel_interp(
+    spatial_samples: NDArray,
+    pixel_indices: NDArray,
+    values: NDArray,
+    interpolation="cubic",
+):
+    # TODO: explain
+    unique, unique_indices = np.unique(pixel_indices, axis=0, return_index=True)
+
+    # placeholder
+    n_unique = len(unique)
+    averaged_spatial_samples = np.zeros(n_unique)
+    for i, val in enumerate(unique):
+        averaged_spatial_samples[i] = np.mean(
+            spatial_samples[(pixel_indices == val).all(axis=1)]
+        )
+
+    interp_f = interp1d(
+        averaged_spatial_samples,
+        values[unique_indices],
+        kind=interpolation,
+        fill_value="extrapolate",
+    )
+    return interp_f(spatial_samples)
+
+
+
