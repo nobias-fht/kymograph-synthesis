@@ -90,10 +90,10 @@ downscale = 4
 # static_path = QuadraticBezierPath(points=path_points)
 
 path_points = [
-    np.array([0.9, 0.5, 0.1]),
+    np.array([0.5, 0.5, 0.1]),
     # np.array([0.7, 0.1, 0.2]),
     # np.array([0.2, 0.9, 0.7]),
-    np.array([0.1, 0.5, 0.9]),
+    np.array([0.5, 0.5, 0.9]),
 ]
 
 # --- run through microsim
@@ -154,8 +154,8 @@ for t in range(n_steps):
     spatial_locations = kymo_sample_path(spatial_samples)
     coords = np.round(spatial_locations).astype(int)
     time_sample = digital_simulation[t, coords[:, 0], coords[:, 1], coords[:, 2]]
-    time_sample_interp = inter_pixel_interp(spatial_samples, coords, time_sample)
-    kymograph[t] = time_sample_interp
+    # time_sample = inter_pixel_interp(spatial_samples, coords, time_sample)
+    kymograph[t] = time_sample
 
 # ---- display
 fig = plt.figure(layout="constrained", figsize=(16, 6))
