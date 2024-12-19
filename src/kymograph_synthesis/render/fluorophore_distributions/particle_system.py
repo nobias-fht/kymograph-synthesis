@@ -27,7 +27,7 @@ class ParticleSystem:
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
 
-        space_coords = self.coords * np.array(space.shape).reshape(1, -1)
+        space_coords = self.coords * max(space.shape)
         indices = np.round(space_coords).astype(int)
 
         # remove out of bounds indices

@@ -13,11 +13,16 @@ from kymograph_synthesis.dynamics.system_simulator import (
     create_particle_simulators,
     run_simulation,
 )
-from kymograph_synthesis.render.static_path import LinearPath, QuadraticBezierPath
+from kymograph_synthesis.render.static_path import (
+    LinearPath,
+    QuadraticBezierPath,
+    PiecewiseQuadraticBezierPath,
+)
 from kymograph_synthesis.render.fluorophore_distributions import (
     ParticleSystem,
     SimplexNoise,
 )
+from kymograph_synthesis.create_kymograph import inter_pixel_interp
 
 # --- simulation params
 n_steps = 64
@@ -63,8 +68,8 @@ particles = create_particle_simulators(
     retro_speed_var,
     intensity_mode=intensity_mode,
     intensity_var=intensity_var,
-    intensity_half_life_mode=n_steps,
-    intensity_half_life_var=n_steps / 4,
+    intensity_half_life_mode=n_steps * 2,
+    intensity_half_life_var=n_steps / 2,
     velocity_noise_std=velocity_noise_std,
     transition_matrix=transition_matrix,
     n_steps=n_steps,
@@ -85,13 +90,17 @@ downscale = 4
 # static_path = QuadraticBezierPath(points=path_points)
 
 path_points = [
-    np.array([0.1, 0.5, 0.1]),
-    np.array([0.9, 0.5, 0.9]),
+    np.array([0.9, 0.5, 0.1]),
+    # np.array([0.7, 0.1, 0.2]),
+    # np.array([0.2, 0.9, 0.7]),
+    np.array([0.1, 0.5, 0.9]),
 ]
-static_path = LinearPath(start=path_points[0], end=path_points[1])
 
 # --- run through microsim
 ground_truth_shape = (z_dim, 64, 512)
+static_path = PiecewiseQuadraticBezierPath(
+    points=[point * np.array(ground_truth_shape)/max(ground_truth_shape) for point in path_points]
+)
 digital_simulation_frames: list[NDArray] = []
 ground_truth_frames: list[NDArray] = []
 static_distributions = [
@@ -107,7 +116,7 @@ for t in range(n_steps):
     ]
     sim = ms.Simulation(
         truth_space=ms.ShapeScaleSpace(
-            shape=ground_truth_shape, scale=(0.02, 0.01, 0.01)
+            shape=ground_truth_shape, scale=(0.04, 0.01, 0.01)
         ),
         output_space={"downscale": downscale},
         sample=ms.Sample(labels=static_distributions + time_varying_distributions),
@@ -138,14 +147,15 @@ for point in kymograph_path_points:
 # kymo_sample_path = QuadraticBezierPath(
 #     points=kymograph_path_points
 # )
-kymo_sample_path = LinearPath(
-    start=kymograph_path_points[0], end=kymograph_path_points[1]
-)
+print("Kymo path points")
+print(kymograph_path_points)
+kymo_sample_path = PiecewiseQuadraticBezierPath(points=kymograph_path_points)
 for t in range(n_steps):
     spatial_locations = kymo_sample_path(spatial_samples)
     coords = np.round(spatial_locations).astype(int)
     time_sample = digital_simulation[t, coords[:, 0], coords[:, 1], coords[:, 2]]
-    kymograph[t] = time_sample
+    time_sample_interp = inter_pixel_interp(spatial_samples, coords, time_sample)
+    kymograph[t] = time_sample_interp
 
 # ---- display
 fig = plt.figure(layout="constrained", figsize=(16, 6))
@@ -209,10 +219,10 @@ for i in range(particle_positions.shape[1]):
         particle_positions[:, i], np.arange(particle_positions.shape[0])
     )
 kymograph_gt_ax.invert_yaxis()
-kymograph_gt_ax.set_aspect(1 / kymograph.shape[1])
+kymograph_gt_ax.set_xlim(0.1, 0.9)
+kymograph_gt_ax.set_aspect((0.9 - 0.1) / kymograph.shape[1])
 kymograph_gt_ax.set_ylabel("Time")
 kymograph_gt_ax.set_xlabel("Position")
-kymograph_gt_ax.set_xlim(0.1, 0.9)
 kymograph_gt_ax.set_ylim(n_steps, 0)
 kymograph_gt_ax.set_title("Kymograph ground truth")
 
