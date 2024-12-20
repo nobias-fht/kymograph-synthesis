@@ -22,7 +22,7 @@ from kymograph_synthesis.render.fluorophore_distributions import (
     ParticleSystem,
     SimplexNoise,
 )
-from kymograph_synthesis.create_kymograph import inter_pixel_interp
+from kymograph_synthesis.sample_kymograph import inter_pixel_interp
 
 # --- simulation params
 n_steps = 64
@@ -91,15 +91,19 @@ downscale = 4
 
 path_points = [
     np.array([0.5, 0.5, 0.1]),
-    # np.array([0.7, 0.1, 0.2]),
-    # np.array([0.2, 0.9, 0.7]),
+    np.array([0.5, 0.5, 0.6]),
+    np.array([0.8, 0.8, 0.7]),
+    np.array([0.5, 0.5, 0.8]),
     np.array([0.5, 0.5, 0.9]),
 ]
 
 # --- run through microsim
 ground_truth_shape = (z_dim, 64, 512)
 static_path = PiecewiseQuadraticBezierPath(
-    points=[point * np.array(ground_truth_shape)/max(ground_truth_shape) for point in path_points]
+    points=[
+        point * np.array(ground_truth_shape) / max(ground_truth_shape)
+        for point in path_points
+    ]
 )
 digital_simulation_frames: list[NDArray] = []
 ground_truth_frames: list[NDArray] = []
@@ -131,9 +135,43 @@ for t in range(n_steps):
 ground_truth = np.concatenate(ground_truth_frames)
 digital_simulation = np.concatenate(digital_simulation_frames)
 
+# --- ground truth kymo
+particle_positions_scaled = (particle_positions - 0.1)/(0.9 - 0.1)
+
+midpoints = particle_positions_scaled[:-1] + np.diff(particle_positions_scaled, axis=0)/2
+
+kymograph_gt = np.zeros((n_steps, n_spatial_samples))
+for t in range(n_steps):
+    original_indices = np.round(particle_positions_scaled[t] * n_spatial_samples)
+    if t != 0:
+        # -- behind
+        gradient = particle_positions_scaled[t] - midpoints[t - 1]
+        interp_n = int(np.ceil(np.abs(gradient*n_spatial_samples).max())) + 1
+        interp_positions = np.linspace(midpoints[t - 1], particle_positions_scaled[t], interp_n)
+        for position in interp_positions:
+            indices = np.round(position * n_spatial_samples).astype(int)
+            intensities = 1 - abs(original_indices - indices)/interp_n
+            in_bounds = (0 <= indices) & (indices < n_spatial_samples)
+            indices = indices[in_bounds]
+            # kymograph_gt[t, indices] += intensities[in_bounds]
+            kymograph_gt[t, indices] = 1
+
+    if t != n_steps - 1:
+        # --- in front
+        gradient = midpoints[t] - particle_positions_scaled[t]
+        interp_n = int(np.ceil(np.abs(gradient*n_spatial_samples).max())) + 1
+        interp_positions = np.linspace(particle_positions_scaled[t], midpoints[t], interp_n)
+        for position in interp_positions:
+            indices = np.round(position * n_spatial_samples).astype(int)
+            intensities = 1 - abs(original_indices - indices)/interp_n
+            in_bounds = (0 <= indices) & (indices < n_spatial_samples)
+            indices = indices[in_bounds]
+            # kymograph_gt[t, indices] += intensities[in_bounds]
+            kymograph_gt[t, indices] = 1
+
+
 
 # --- create kymograph
-spatial_samples = np.linspace(0.1, 0.9, n_spatial_samples)
 kymograph = np.zeros((n_steps, n_spatial_samples))
 # linear_path = LinearPath(
 #     start=np.array(path_start) * ground_truth_shape / downscale, end=np.array(path_end) * ground_truth_shape / downscale
@@ -150,11 +188,14 @@ for point in kymograph_path_points:
 print("Kymo path points")
 print(kymograph_path_points)
 kymo_sample_path = PiecewiseQuadraticBezierPath(points=kymograph_path_points)
+spatial_samples = np.linspace(0, 1, int(np.ceil(kymo_sample_path.length())))
 for t in range(n_steps):
     spatial_locations = kymo_sample_path(spatial_samples)
     coords = np.round(spatial_locations).astype(int)
     time_sample = digital_simulation[t, coords[:, 0], coords[:, 1], coords[:, 2]]
-    # time_sample = inter_pixel_interp(spatial_samples, coords, time_sample)
+    time_sample = inter_pixel_interp(
+        spatial_samples, coords, time_sample, np.linspace(0.1, 0.9, n_spatial_samples)
+    )
     kymograph[t] = time_sample
 
 # ---- display
@@ -213,19 +254,19 @@ kymograph_ax.set_ylabel("Time")
 kymograph_ax.set_xlabel("Position")
 kymograph_ax.set_title("Kymograph")
 
-# --- diplay kymograph ground truth
-for i in range(particle_positions.shape[1]):
-    kymograph_gt_ax.plot(
-        particle_positions[:, i], np.arange(particle_positions.shape[0])
-    )
-kymograph_gt_ax.invert_yaxis()
-kymograph_gt_ax.set_xlim(0.1, 0.9)
-kymograph_gt_ax.set_aspect((0.9 - 0.1) / kymograph.shape[1])
-kymograph_gt_ax.set_ylabel("Time")
-kymograph_gt_ax.set_xlabel("Position")
-kymograph_gt_ax.set_ylim(n_steps, 0)
-kymograph_gt_ax.set_title("Kymograph ground truth")
-
+# # --- diplay kymograph ground truth
+# for i in range(particle_positions.shape[1]):
+#     kymograph_gt_ax.plot(
+#         particle_positions[:, i], np.arange(particle_positions.shape[0])
+#     )
+# kymograph_gt_ax.invert_yaxis()
+# kymograph_gt_ax.set_xlim(0.1, 0.9)
+# kymograph_gt_ax.set_aspect((0.9 - 0.1) / kymograph.shape[1])
+# kymograph_gt_ax.set_ylabel("Time")
+# kymograph_gt_ax.set_xlabel("Position")
+# kymograph_gt_ax.set_ylim(n_steps, 0)
+# kymograph_gt_ax.set_title("Kymograph ground truth")
+kymograph_gt_ax.imshow(kymograph_gt, cmap="gray")
 
 # fig.tight_layout()
 plt.show()
