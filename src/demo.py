@@ -69,7 +69,9 @@ particles = create_particle_simulators(
     transition_matrix=transition_matrix,
     n_steps=n_steps,
 )
-particle_positions, particle_intensities = run_simulation(n_steps, particles)
+particle_positions, particle_intensities, particle_states = run_simulation(
+    n_steps, particles
+)
 
 # --- render ground truth
 z_dim = 32
