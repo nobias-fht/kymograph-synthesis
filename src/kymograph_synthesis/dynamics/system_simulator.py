@@ -130,10 +130,12 @@ def run_simulation(
     n_particles = len(particle_simulators)
     positions = np.zeros((n_steps, n_particles))
     intensities = np.zeros((n_steps, n_particles))
+    states = np.zeros((n_steps, n_particles), dtype=int)
     for i in range(n_steps):
         for j, particle in enumerate(particle_simulators):
             positions[i, j] = particle.position
             intensities[i, j] = particle.intensity
+            states[i, j] = particle.state.value()
             particle.step()
 
-    return positions, intensities
+    return positions, intensities, states
