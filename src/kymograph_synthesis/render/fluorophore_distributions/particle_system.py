@@ -26,7 +26,7 @@ class ParticleSystem:
         return cls(coords=space_coords, intensities=intensities)
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
-
+        #TODO: check how non-equal spatial dimensions are treated in microsim
         space_coords = self.coords * max(space.shape)
         indices = np.round(space_coords).astype(int)
 
