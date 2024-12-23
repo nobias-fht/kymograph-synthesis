@@ -124,7 +124,7 @@ def create_particle_simulators(
     ]
 
 
-def run_simulation(
+def run_dynamics_simulation(
     n_steps: int, particle_simulators: list[ParticleSimulator]
 ) -> NDArray:
     n_particles = len(particle_simulators)

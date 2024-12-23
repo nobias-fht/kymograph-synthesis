@@ -141,13 +141,13 @@ class PiecewiseQuadraticBezierPath:
         segment_mask = np.digitize(ratio, bins=self.segment_ratio_bins[1:], right=True)
         result = np.zeros((*ratio.shape, self.dims))  # initialize place holder
         for n in range(self.n_segments):
-            linear_path_segment = self.path_segments[n]
+            path_segment = self.path_segments[n]
             segment_ratios = ratio[segment_mask == n]
             # scale correctly
             segment_ratios = (segment_ratios - self.segment_ratio_bins[n]) * (
                 self.total_length / self.segment_lengths[n]
             )
-            segment_result = linear_path_segment(segment_ratios)
+            segment_result = path_segment(segment_ratios)
             result[segment_mask == n] = segment_result
         return result
 
