@@ -17,7 +17,7 @@ TransitionMatrixType = dict[
 ]
 
 
-class DynamicsConfig(BaseModel):
+class DynamicsParams(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True)
 
