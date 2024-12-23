@@ -11,7 +11,7 @@ from kymograph_synthesis.dynamics.particle_simulator.motion_state_collection imp
 )
 from kymograph_synthesis.dynamics.system_simulator import (
     create_particle_simulators,
-    run_simulation,
+    run_dynamics_simulation,
 )
 from kymograph_synthesis.render.static_path import LinearPath, QuadraticBezierPath
 from kymograph_synthesis.render.fluorophore_distributions import (
@@ -69,7 +69,9 @@ particles = create_particle_simulators(
     transition_matrix=transition_matrix,
     n_steps=n_steps,
 )
-particle_positions, particle_intensities = run_simulation(n_steps, particles)
+particle_positions, particle_intensities, particle_states = run_dynamics_simulation(
+    n_steps, particles
+)
 
 # --- render ground truth
 z_dim = 32

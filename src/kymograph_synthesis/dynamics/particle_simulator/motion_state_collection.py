@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import Enum, auto
 
 class MotionStateCollection(Enum):
-    ANTEROGRADE = "anterograde"
-    STATIONARY = "stationary"
-    RETROGRADE = "retrograde"
+    ANTEROGRADE = auto()
+    STATIONARY = auto()
+    RETROGRADE = auto()
