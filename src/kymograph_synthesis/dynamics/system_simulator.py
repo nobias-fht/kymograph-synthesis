@@ -135,7 +135,7 @@ def run_dynamics_simulation(
         for j, particle in enumerate(particle_simulators):
             positions[i, j] = particle.position
             intensities[i, j] = particle.intensity
-            states[i, j] = particle.state.value()
+            states[i, j] = particle.state.value
             particle.step()
 
     return positions, intensities, states
