@@ -27,7 +27,7 @@ class SimplexNoise:
 
     @lru_cache
     def noise_array(self, dims: tuple[int, int, int]) -> NDArray:
-        opensimplex.seed(self.seed)
+        opensimplex.seed(self._seed)
         noise_array = np.zeros(dims)
         for scale, weight in zip(self._scales, self._scale_weights):
             noise_grid = [np.arange(dim) * scale / max(dims) for dim in reversed(dims)]
