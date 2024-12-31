@@ -75,7 +75,7 @@ def decide_initial_state(initial_state_ratios: dict[MotionStateCollection, float
         cumulative_prob += prob
         if decision_prob <= cumulative_prob:
             return state
-    print("should be unreachable")
+    assert False, "Should be unreachable"
 
 
 def create_particle_simulators(
