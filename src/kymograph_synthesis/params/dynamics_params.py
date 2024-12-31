@@ -9,6 +9,7 @@ from pydantic import (
     PositiveFloat,
     NonNegativeFloat
 )
+import numpy as np
 
 from ..dynamics.particle_simulator.motion_state_collection import MotionStateCollection
 
@@ -79,6 +80,8 @@ class DynamicsParams(BaseModel):
     another. First index denotes the particles current state and the second denotes the 
     state it can transition to.
     """
+
+    seed: int = Field(default_factory=lambda: np.random.randint(2**63))
 
     @field_validator("transition_matrix")
     @classmethod

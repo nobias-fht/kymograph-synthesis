@@ -13,7 +13,7 @@ from .particle_simulator.motion_state_collection import MotionStateCollection
 
 
 def calc_markov_stationary_state(
-    markov_transition_matrix: TransitionMatrixType,
+    markov_transition_matrix: TransitionMatrixType, rng: np.random.Generator
 ) -> dict[MotionStateCollection, float]:
     keys = list(markov_transition_matrix.keys())
 
@@ -25,7 +25,7 @@ def calc_markov_stationary_state(
     )
     n = P.shape[0]  # n states
 
-    eigenvalues, eigenvectors = np.linalg.eig(P.T) # left eigen values
+    eigenvalues, eigenvectors = np.linalg.eig(P.T)  # left eigen values
     stationary_states = []
     for i, eigenvalue in enumerate(eigenvalues):
         if np.isclose(eigenvalue, 1, atol=1e-2):
@@ -38,14 +38,13 @@ def calc_markov_stationary_state(
 
     # create random linear combination of all the stationary states
     stationary_distribution = np.zeros(n)
-    state_weights = np.random.random(len(stationary_states))
+    state_weights = rng.random(len(stationary_states))
     for state, weight in zip(stationary_states, state_weights):
         stationary_distribution += weight * state
 
     stationary_distribution /= stationary_distribution.sum()
 
     return {key: val for key, val in zip(keys, stationary_distribution)}
-
 
 
 def log_normal_params(mode: float, var: float):
@@ -63,13 +62,17 @@ def log_normal_params(mode: float, var: float):
     return mu, sigma_2**0.5
 
 
-def log_normal_distr(mode: float, var: float) -> Callable[[], float]:
+def log_normal_distr(
+    mode: float, var: float, rng: np.random.Generator
+) -> Callable[[], float]:
     mu, sigma = log_normal_params(mode, var)
-    return partial(np.random.lognormal, mean=mu, sigma=sigma)
+    return partial(rng.lognormal, mean=mu, sigma=sigma)
 
 
-def decide_initial_state(initial_state_ratios: dict[MotionStateCollection, float]):
-    decision_prob = np.random.random()
+def decide_initial_state(
+    initial_state_ratios: dict[MotionStateCollection, float], rng: np.random.Generator
+):
+    decision_prob = rng.random()
     cumulative_prob = 0
     for state, prob in initial_state_ratios.items():
         cumulative_prob += prob
@@ -90,34 +93,37 @@ def create_particle_simulators(
     intensity_half_life_var: float,
     velocity_noise_std: float,
     transition_matrix: TransitionMatrixType,
-    n_steps: int = 256,
+    n_steps: int,
+    rng: np.random.Generator,
 ) -> list[ParticleSimulator]:
 
-    markov_stationary_state = calc_markov_stationary_state(transition_matrix)
+    markov_stationary_state = calc_markov_stationary_state(transition_matrix, rng=rng)
 
     approx_travel_distance = max(antero_speed_mode, retro_speed_mode) * n_steps
     buffer_distance = approx_travel_distance * 1.5
     path_start = 0 - buffer_distance
     path_end = 1 + buffer_distance
 
-    initial_intensity_distr = log_normal_distr(intensity_mode, intensity_var)
+    initial_intensity_distr = log_normal_distr(intensity_mode, intensity_var, rng=rng)
     intensity_half_life_distr = log_normal_distr(
-        intensity_half_life_mode, intensity_half_life_var
+        intensity_half_life_mode, intensity_half_life_var, rng=rng
     )
 
     n_particles = int(np.round((path_end - path_start) * particle_density))
 
     return [
         ParticleSimulator(
-            initial_position=np.random.uniform(low=path_start, high=path_end),
-            initial_state=decide_initial_state(markov_stationary_state),
-            antero_speed_distr=log_normal_distr(antero_speed_mode, antero_speed_var),
-            retro_speed_distr=log_normal_distr(retro_speed_mode, retro_speed_var),
+            initial_position=rng.uniform(low=path_start, high=path_end),
+            initial_state=decide_initial_state(markov_stationary_state, rng=rng),
+            antero_speed_distr=log_normal_distr(
+                antero_speed_mode, antero_speed_var, rng=rng
+            ),
+            retro_speed_distr=log_normal_distr(
+                retro_speed_mode, retro_speed_var, rng=rng
+            ),
             initial_intensity=initial_intensity_distr(),
             intensity_half_life=intensity_half_life_distr(),
-            velocity_noise_distr=partial(
-                np.random.normal, loc=0, scale=velocity_noise_std
-            ),
+            velocity_noise_distr=partial(rng.normal, loc=0, scale=velocity_noise_std),
             transition_matrix=transition_matrix,
         )
         for _ in range(n_particles)
