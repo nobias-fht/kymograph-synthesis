@@ -1,13 +1,17 @@
-from typing import Any
+from typing import Literal
 from typing_extensions import Self
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, model_validator, Field, PositiveInt
 
+from .collection import FluoroDistrName
+
 
 class SimplexNoiseParams(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True)
+
+    name: Literal[FluoroDistrName.SIMPLEX_NOISE] = FluoroDistrName.SIMPLEX_NOISE
 
     scales: list[float]
     scale_weights: list[float] = Field(
