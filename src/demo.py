@@ -22,7 +22,7 @@ from kymograph_synthesis.render.fluorophore_distributions import (
     ParticleSystem,
     SimplexNoise,
 )
-from kymograph_synthesis.create_kymograph import inter_pixel_interp
+from kymograph_synthesis.sample_kymograph import inter_pixel_interp
 
 # --- simulation params
 n_steps = 64
@@ -149,15 +149,17 @@ print("Kymo path points")
 print(kymograph_path_points)
 kymo_sample_path = PiecewiseQuadraticBezierPath(points=kymograph_path_points)
 
+n_path_units = int(np.floor(kymo_sample_path.length()))
 n_spatial_samples = int(np.floor(kymo_sample_path.length()*0.8))
 spatial_samples = np.linspace(0.1, 0.9, n_spatial_samples)
+path_samples = np.linspace(0, 1, n_path_units)
 kymograph = np.zeros((n_steps, n_spatial_samples))
 
 for t in range(n_steps):
-    spatial_locations = kymo_sample_path(spatial_samples)
+    spatial_locations = kymo_sample_path(path_samples)
     coords = np.round(spatial_locations).astype(int)
     time_sample = digital_simulation[t, coords[:, 0], coords[:, 1], coords[:, 2]]
-    time_sample = inter_pixel_interp(spatial_samples, coords, time_sample)
+    time_sample = inter_pixel_interp(path_samples, coords, time_sample, new_path_samples=spatial_samples)
     kymograph[t] = time_sample
 
 # ---- display

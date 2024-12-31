@@ -10,6 +10,7 @@ from .render.static_path import StaticPath
 def sample_kymograph(
     image_stack: NDArray,
     sample_path: StaticPath,
+    path_clip: tuple[float, float],
     n_spatial_samples: int,
     interpolation: Optional[
         Literal[
@@ -53,7 +54,7 @@ def sample_kymograph(
                 indices,
                 sample,
                 interpolation=interpolation,
-                new_path_samples=np.linspace(0, 1, n_spatial_samples),
+                new_path_samples=np.linspace(*path_clip, n_spatial_samples),
             )
         kymograph[t] = sample
 
