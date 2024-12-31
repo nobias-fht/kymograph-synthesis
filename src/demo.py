@@ -107,7 +107,7 @@ digital_simulation_frames: list[NDArray] = []
 ground_truth_frames: list[NDArray] = []
 static_distributions = [
     SimplexNoise(
-        scales=[5, 10], scale_weights=[1, 1], max_intensity=intensity_mode * 10e-5
+        seed=3, scales=[5, 10], scale_weights=[1, 1], max_intensity=intensity_mode * 10e-5
     )
 ]
 for t in range(n_steps):
@@ -135,11 +135,7 @@ digital_simulation = np.concatenate(digital_simulation_frames)
 
 
 # --- create kymograph
-spatial_samples = np.linspace(0.1, 0.9, n_spatial_samples)
-kymograph = np.zeros((n_steps, n_spatial_samples))
-# linear_path = LinearPath(
-#     start=np.array(path_start) * ground_truth_shape / downscale, end=np.array(path_end) * ground_truth_shape / downscale
-# )
+
 kymograph_path_points = [
     point * ground_truth_shape / downscale for point in path_points
 ]
@@ -152,11 +148,16 @@ for point in kymograph_path_points:
 print("Kymo path points")
 print(kymograph_path_points)
 kymo_sample_path = PiecewiseQuadraticBezierPath(points=kymograph_path_points)
+
+n_spatial_samples = int(np.floor(kymo_sample_path.length()*0.8))
+spatial_samples = np.linspace(0.1, 0.9, n_spatial_samples)
+kymograph = np.zeros((n_steps, n_spatial_samples))
+
 for t in range(n_steps):
     spatial_locations = kymo_sample_path(spatial_samples)
     coords = np.round(spatial_locations).astype(int)
     time_sample = digital_simulation[t, coords[:, 0], coords[:, 1], coords[:, 2]]
-    # time_sample = inter_pixel_interp(spatial_samples, coords, time_sample)
+    time_sample = inter_pixel_interp(spatial_samples, coords, time_sample)
     kymograph[t] = time_sample
 
 # ---- display

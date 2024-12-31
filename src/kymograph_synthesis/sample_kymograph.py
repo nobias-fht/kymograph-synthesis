@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 
 from .render.static_path import StaticPath
 
+
 def sample_kymograph(
     image_stack: NDArray,
     sample_path: StaticPath,
@@ -35,7 +36,8 @@ def sample_kymograph(
         Number of spatial samples.
     """
     n_time_samples = image_stack.shape[0]
-    path_samples = np.linspace(0.01, 0.99, n_spatial_samples)
+    n_path_units = np.floor(sample_path.length())
+    path_samples = np.linspace(0, 1, n_path_units)
     coords = sample_path(path_samples)
     indices = np.round(coords).astype(int)
 
@@ -47,7 +49,11 @@ def sample_kymograph(
         sample = image_stack[t, *[indices[:, i] for i in range(indices.shape[1])]]
         if interpolation is not None:
             sample = inter_pixel_interp(
-                path_samples, indices, sample, interpolation=interpolation
+                path_samples,
+                indices,
+                sample,
+                interpolation=interpolation,
+                new_path_samples=np.linspace(0, 1, n_spatial_samples),
             )
         kymograph[t] = sample
 
@@ -79,6 +85,3 @@ def inter_pixel_interp(
         fill_value="extrapolate",
     )
     return interp_f(new_path_samples)
-
-
-
