@@ -1,4 +1,3 @@
-from typing import Optional
 from functools import lru_cache
 
 import numpy as np
@@ -13,19 +12,14 @@ class SimplexNoise:
     def __init__(
         self,
         scales: list[float],
-        scale_weights: Optional[list[float]],
+        scale_weights: list[float],
         max_intensity: float,
-        seed: Optional[int] = None,
+        seed: int,
     ):
-        if seed is not None:
-            self.seed = seed
-        else:
-            opensimplex.random_seed()
-            self.seed = opensimplex.get_seed()
-
-        self._max_intensity = max_intensity
+        self._seed = seed
         self._scales = scales
         self._scale_weights = scale_weights
+        self._max_intensity = max_intensity
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
         space += self.noise_array(dims=space.shape)
