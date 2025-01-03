@@ -50,7 +50,7 @@ def calc_markov_stationary_state(
 def log_normal_params(mode: float, var: float):
 
     eqn = lambda x, var, mode: x**4 - x**3 - (var / mode**2)
-    result = optimize.root_scalar(
+    result: optimize.RootResults = optimize.root_scalar(
         f=eqn, args=(var, mode), method="toms748", bracket=[1e-16, 20]
     )
     if not result.converged:
