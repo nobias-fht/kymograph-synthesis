@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 from pydantic import ConfigDict, BaseModel, Field, create_model, model_validator
 import microsim.schema as ms
 
-from . import RenderParams, DynamicsParams, KymographParams
+from . import RenderingParams, DynamicsParams, KymographParams
 
 
 # for type hinting
@@ -54,15 +54,15 @@ def _render_particle_path_points_factory(
     return [(zi, yi, xi) for zi, yi, xi in points]
 
 
-def _render_params_default_factory(data: dict[str, Any]) -> RenderParams:
+def _render_params_default_factory(data: dict[str, Any]) -> RenderingParams:
     path_points = _render_particle_path_points_factory(data)
-    return RenderParams(particle_path_points=path_points)
+    return RenderingParams(particle_path_points=path_points)
 
 
 def _kymograph_sample_path_points_default_factory(
     data: dict[str, Any]
 ) -> list[tuple[float, float, float]]:
-    assert isinstance(data["render"], RenderParams)
+    assert isinstance(data["render"], RenderingParams)
     assert isinstance(data["imaging"], ImagingParams)
 
     truth_space_shape = np.array(data["imaging"].truth_space.shape)
@@ -70,7 +70,7 @@ def _kymograph_sample_path_points_default_factory(
     z_mid = z_dims / 2
     # relative path points are expressed as a ratio of the x dimension
     relative_particle_path_points: NDArray[np.float_] = np.array(
-        data["render"].particle_path_points, dtype=float
+        data["rendering"].particle_path_points, dtype=float
     )
     # path_points in pixel index space coordinates
     particle_path_points: NDArray[np.float_] = (
@@ -101,7 +101,7 @@ class Params(BaseModel):
         exposure_ms=100,
     )
 
-    render: RenderParams = Field(default_factory=_render_params_default_factory)
+    rendering: RenderingParams = Field(default_factory=_render_params_default_factory)
 
     kymograph: KymographParams = Field(
         default_factory=_kymograph_params_default_factory

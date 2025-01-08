@@ -4,7 +4,7 @@ from .fluorophone_distributions import FluorphoneDistributionParams, SimplexNois
 import numpy as np
 
 
-class RenderParams(BaseModel):
+class RenderingParams(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, validate_default=True)
 
