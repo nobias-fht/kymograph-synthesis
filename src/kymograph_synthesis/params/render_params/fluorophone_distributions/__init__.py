@@ -5,6 +5,6 @@ from pydantic import Field
 from .simplex_noise import SimplexNoiseParams
 
 # possibility to expand union
-FluorphoneDistributions = Annotated[
+FluorphoneDistributionParams = Annotated[
     Union[SimplexNoiseParams], Field(discriminator="name")
 ]

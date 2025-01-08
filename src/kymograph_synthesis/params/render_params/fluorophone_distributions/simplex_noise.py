@@ -20,7 +20,7 @@ class SimplexNoiseParams(BaseModel):
     )
     max_intensity: float
     # random int64 as specified in the opensimplex docs
-    seed: PositiveInt = Field(
+    seed: int = Field(
         default_factory=lambda: np.random.randint(-(2**63), 2**63 - 1),
         validate_default=True,
     )

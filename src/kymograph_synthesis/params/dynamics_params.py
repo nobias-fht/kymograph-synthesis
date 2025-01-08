@@ -52,23 +52,28 @@ def transition_matrix_default_factory(data: dict[str:Any]) -> TransitionMatrixTy
     if data["particle_behaviour"] == "unidirectional":
         values[(0, 0, 1, 2, 2), (1, 2, 1, 0, 1)] = 0
     # normalise to sum to 1
-    values = np.divide(values, values.sum(axis=1).reshape(-1, 1), where=values != 0)
+    values_normed = np.divide(
+        values,
+        values.sum(axis=1).reshape(-1, 1),
+        out=np.zeros_like(values),
+        where=values != 0,
+    )
     states = [
         MotionStateCollection.ANTEROGRADE,
         MotionStateCollection.STATIONARY,
-        MotionStateCollection.ANTEROGRADE,
+        MotionStateCollection.RETROGRADE,
     ]
     transition_matrix = {}
     for i, from_state in enumerate(states):
         transition_matrix[from_state] = {}
         for j, to_state in enumerate(states):
-            transition_matrix[from_state][to_state] = values[i, j]
+            transition_matrix[from_state][to_state] = values_normed[i, j]
     return transition_matrix
 
 
 class DynamicsParams(BaseModel):
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(validate_assignment=True, validate_default=True)
 
     n_steps: PositiveInt = Field(default_factory=lambda: np.random.randint(64, 128))
     """The number of simulation steps in the dynamics simulation."""
@@ -143,7 +148,9 @@ class DynamicsParams(BaseModel):
     Variance of the paticle intensity half-life, modeled by a log-normal distribution.
     """
 
-    particle_behaviour: Literal["unidirectional", "bidirectional"]
+    particle_behaviour: Literal["unidirectional", "bidirectional"] = Field(
+        default_factory=lambda: np.random.choice(["unidirectional", "bidirectional"])
+    )
 
     # TODO: generate transition matrix from unidirectional label
     transition_matrix: TransitionMatrixType = Field(
@@ -176,7 +183,7 @@ class DynamicsParams(BaseModel):
         states = [
             MotionStateCollection.ANTEROGRADE,
             MotionStateCollection.STATIONARY,
-            MotionStateCollection.ANTEROGRADE,
+            MotionStateCollection.RETROGRADE,
         ]
         transition_matrix_array = np.array(
             [
@@ -185,10 +192,10 @@ class DynamicsParams(BaseModel):
             ]
         )
         if (self.particle_behaviour == "unidirectional") and (
-            transition_matrix_array[(0, 0, 1, 2, 2), (1, 2, 1, 0, 1)] == 0
-        ).any():
+            transition_matrix_array[(0, 0, 1, 2, 2), (1, 2, 1, 0, 1)] != 0
+        ).all():
             raise ValueError(
                 "Particle behviour label 'unidirectional' does not match transition "
-                "matrix"
+                f"matrix: \n{transition_matrix_array}"
             )
         return self
