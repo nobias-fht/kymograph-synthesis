@@ -62,7 +62,7 @@ def _render_params_default_factory(data: dict[str, Any]) -> RenderingParams:
 def _kymograph_sample_path_points_default_factory(
     data: dict[str, Any]
 ) -> list[tuple[float, float, float]]:
-    assert isinstance(data["render"], RenderingParams)
+    assert isinstance(data["rendering"], RenderingParams)
     assert isinstance(data["imaging"], ImagingParams)
 
     truth_space_shape = np.array(data["imaging"].truth_space.shape)
