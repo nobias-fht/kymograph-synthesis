@@ -83,15 +83,15 @@ def decide_initial_state(
 
 def create_particle_simulators(
     particle_density: float,
-    antero_speed_mode: float,
-    antero_speed_var: float,
-    retro_speed_mode: float,
-    retro_speed_var: float,
-    intensity_mode: float,
-    intensity_var: float,
-    intensity_half_life_mode: float,
-    intensity_half_life_var: float,
-    velocity_noise_std: float,
+    antero_mode: float,
+    antero_var: float,
+    retro_mode: float,
+    retro_var: float,
+    fluorophores_per_particle_mode: float,
+    fluorophores_per_particle_var: float,
+    fluorophore_halflife_mode: float,
+    fluorophore_halflife_var: float,
+    noise_var: float,
     transition_matrix: TransitionMatrixType,
     n_steps: int,
     rng: np.random.Generator,
@@ -99,14 +99,14 @@ def create_particle_simulators(
 
     markov_stationary_state = calc_markov_stationary_state(transition_matrix, rng=rng)
 
-    approx_travel_distance = max(antero_speed_mode, retro_speed_mode) * n_steps
+    approx_travel_distance = max(antero_mode, retro_mode) * n_steps
     buffer_distance = approx_travel_distance * 1.5
     path_start = 0 - buffer_distance
     path_end = 1 + buffer_distance
 
-    initial_intensity_distr = log_normal_distr(intensity_mode, intensity_var, rng=rng)
+    initial_intensity_distr = log_normal_distr(fluorophores_per_particle_mode, fluorophores_per_particle_var, rng=rng)
     intensity_half_life_distr = log_normal_distr(
-        intensity_half_life_mode, intensity_half_life_var, rng=rng
+        fluorophore_halflife_mode, fluorophore_halflife_var, rng=rng
     )
 
     n_particles = int(np.round((path_end - path_start) * particle_density))
@@ -116,14 +116,14 @@ def create_particle_simulators(
             initial_position=rng.uniform(low=path_start, high=path_end),
             initial_state=decide_initial_state(markov_stationary_state, rng=rng),
             antero_speed_distr=log_normal_distr(
-                antero_speed_mode, antero_speed_var, rng=rng
+                antero_mode, antero_var, rng=rng
             ),
             retro_speed_distr=log_normal_distr(
-                retro_speed_mode, retro_speed_var, rng=rng
+                retro_mode, retro_var, rng=rng
             ),
             initial_intensity=initial_intensity_distr(),
             intensity_half_life=intensity_half_life_distr(),
-            velocity_noise_distr=partial(rng.normal, loc=0, scale=velocity_noise_std),
+            velocity_noise_distr=partial(rng.normal, loc=0, scale=noise_var**0.5),
             transition_matrix=transition_matrix,
         )
         for _ in range(n_particles)
