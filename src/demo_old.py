@@ -66,11 +66,11 @@ particles = create_particle_simulators(
     antero_speed_var,
     retro_speed_mode,
     retro_speed_var,
-    intensity_mode=intensity_mode,
-    intensity_var=intensity_var,
-    intensity_half_life_mode=n_steps * 2,
-    intensity_half_life_var=n_steps / 2,
-    velocity_noise_std=velocity_noise_std,
+    fluorophores_per_particle_mode=intensity_mode,
+    fluorophores_per_particle_var=intensity_var,
+    fluorophore_halflife_mode=n_steps * 2,
+    fluorophore_halflife_var=n_steps / 2,
+    noise_var=velocity_noise_std,
     transition_matrix=transition_matrix,
     n_steps=n_steps,
 )
@@ -107,7 +107,7 @@ digital_simulation_frames: list[NDArray] = []
 ground_truth_frames: list[NDArray] = []
 static_distributions = [
     SimplexNoise(
-        seed=3, scales=[5, 10], scale_weights=[1, 1], max_intensity=intensity_mode * 10e-5
+        seed=3, noise_scales=[5, 10], scale_weights=[1, 1], max_intensity=intensity_mode * 10e-5
     )
 ]
 for t in range(n_steps):

@@ -6,7 +6,7 @@ from pydantic import ConfigDict, BaseModel, Field, create_model, model_validator
 import microsim.schema as ms
 
 from . import RenderingParams, DynamicsParams, KymographParams
-
+from ..render.static_path import PiecewiseQuadraticBezierPath
 
 # for type hinting
 class ImagingParams(BaseModel): ...
@@ -33,11 +33,13 @@ def _build_imaging_params_class():
 
 ImagingParams = _build_imaging_params_class()
 
-
 def _render_particle_path_points_factory(
     data: dict[str, Any]
 ) -> list[tuple[float, float, float]]:
+    # truth space scale is in um
+    truth_space_scale = np.array(data["imaging"].truth_space.scale)
     truth_space_shape = np.array(data["imaging"].truth_space.shape)
+    desired_path_length = data["dynamics"].path_length
 
     n_points = 4
     x = np.zeros(n_points, dtype=float)
@@ -48,10 +50,15 @@ def _render_particle_path_points_factory(
     z = np.random.uniform(0.1, 0.9, n_points)
 
     isotropic_points = np.array([(zi, yi, xi) for zi, yi, xi in zip(z, y, x)])
-    # points are expressed as a ratio of the x dimension
-    points = isotropic_points * truth_space_shape / truth_space_shape[2]
+    # now points are in um uints
+    points = isotropic_points * truth_space_scale * truth_space_shape
 
-    return [(zi, yi, xi) for zi, yi, xi in points]
+    # TODO: I don't like this here maybe isotropic path points should be kept in params
+    # scale points so that the path has the desired length
+    initial_path = PiecewiseQuadraticBezierPath(points)
+    new_points = points * desired_path_length / initial_path.length()
+
+    return [(zi, yi, xi) for zi, yi, xi in new_points]
 
 
 def _render_params_default_factory(data: dict[str, Any]) -> RenderingParams:
@@ -66,18 +73,16 @@ def _kymograph_sample_path_points_default_factory(
     assert isinstance(data["imaging"], ImagingParams)
 
     truth_space_shape = np.array(data["imaging"].truth_space.shape)
+    truth_space_scale = np.array(data["imaging"].truth_space.scale)
+    downscale = data["imaging"].output_space.downscale
     z_dims = truth_space_shape[0]
-    z_mid = z_dims / 2
-    # relative path points are expressed as a ratio of the x dimension
-    relative_particle_path_points: NDArray[np.float_] = np.array(
+    z_mid = z_dims / 2 / downscale 
+
+    real_path_points = np.array(
         data["rendering"].particle_path_points, dtype=float
     )
-    # path_points in pixel index space coordinates
-    particle_path_points: NDArray[np.float_] = (
-        relative_particle_path_points * truth_space_shape[2]
-    )
-    sample_path_points = particle_path_points.copy()
-    # replace z with the mid point of the stack for sampling
+    index_path_points = (real_path_points / np.array(truth_space_scale)) / downscale
+    sample_path_points = index_path_points.copy()
     sample_path_points[:, 0] = z_mid
     return [(zi, yi, xi) for zi, yi, xi in sample_path_points]
 
@@ -86,6 +91,18 @@ def _kymograph_params_default_factory(data: dict[str, Any]) -> KymographParams:
     sample_path_points = _kymograph_sample_path_points_default_factory(data)
     return KymographParams(sample_path_points=sample_path_points)
 
+def _imaging_params_default_factory(data: dict[str, Any]) -> ImagingParams:
+    # path_points = 
+    # TODO: choose rendering size from path coords
+    # - have to swap rendering and imaging, another reason to calc shape in rendering
+
+    return ImagingParams(
+        truth_space=ms.ShapeScaleSpace(shape=(32, 64, 512), scale=(0.16, 0.04, 0.04)),
+        output_space={"downscale": 4},
+        modality=ms.Widefield(),
+        detector=ms.CameraCCD(qe=1, read_noise=4, bit_depth=12, offset=100),
+        exposure_ms=100,
+    )
 
 class Params(BaseModel):
 
@@ -93,13 +110,7 @@ class Params(BaseModel):
 
     dynamics: DynamicsParams = DynamicsParams()
 
-    imaging: "ImagingParams" = ImagingParams(
-        truth_space=ms.ShapeScaleSpace(shape=(32, 64, 512), scale=(0.04, 0.01, 0.01)),
-        output_space={"downscale": 4},
-        modality=ms.Widefield(),
-        detector=ms.CameraCCD(qe=1, read_noise=4, bit_depth=12, offset=100),
-        exposure_ms=100,
-    )
+    imaging: "ImagingParams" = Field(default_factory=_imaging_params_default_factory)
 
     rendering: RenderingParams = Field(default_factory=_render_params_default_factory)
 

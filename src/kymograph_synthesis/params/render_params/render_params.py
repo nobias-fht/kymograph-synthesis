@@ -13,6 +13,10 @@ class RenderingParams(BaseModel):
 
     static_distributions: list[FluorphoneDistributionParams] = Field(
         default=[
-            SimplexNoiseParams(scales=[5, 10], max_intensity=np.random.uniform(20, 40))
+            SimplexNoiseParams(
+                noise_scales=[0.5, 0.25],
+                scale_weights=[1, 0.5],
+                max_intensity=np.random.uniform(300, 600) * 10e-4,
+            )
         ]
     )

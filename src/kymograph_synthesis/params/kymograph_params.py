@@ -1,12 +1,15 @@
 from typing import Optional, Literal
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 
+import numpy as np
 
 class KymographParams(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True)
 
     sample_path_points: list[tuple[float, float, float]]
+
+    n_samples: int = Field(default_factory=lambda: np.random.random_integers(64, 128))
 
     path_clip: tuple[float, float]=[0.1, 0.9]
 

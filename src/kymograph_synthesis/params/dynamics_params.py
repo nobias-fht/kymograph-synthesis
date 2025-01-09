@@ -171,11 +171,11 @@ class DynamicsParams(BaseModel):
     noise_var: PositiveFloat = Field(default_factory=lambda: np.random.uniform(0, 0.4))
 
     fluorophores_per_particle_mode: PositiveFloat = Field(
-        default_factory=lambda: np.random.uniform(200, 400)
+        default_factory=lambda: np.random.uniform(300, 600)
     )
 
     fluorophores_per_particle_var: PositiveFloat = Field(
-        default_factory=lambda: np.random.uniform(0, 30**2)
+        default_factory=lambda: np.random.uniform(0, 45**2)
     )
 
     # TODO: probably not very realistic, particles should have the same bleaching rate

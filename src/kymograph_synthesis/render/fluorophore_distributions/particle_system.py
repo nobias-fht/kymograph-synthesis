@@ -29,7 +29,7 @@ class ParticleSystem:
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
         truth_space = cast(ms.space.Space, space.attrs["space"])
-        space_coords = self.coords * np.array(truth_space.scale)
+        space_coords = self.coords / np.array(truth_space.scale)
         
         indices = np.round(space_coords).astype(int)
 
