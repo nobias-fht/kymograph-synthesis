@@ -13,12 +13,12 @@ class SimplexNoiseParams(BaseModel):
 
     name: Literal[FluoroDistrName.SIMPLEX_NOISE] = FluoroDistrName.SIMPLEX_NOISE
 
-    scales: list[float]
+    noise_scales: list[float]
     scale_weights: list[float] = Field(
         default_factory=lambda data: [1 for _ in range(len(data["scales"]))],
         validate_default=True,
     )
-    max_intensity: float
+    max_fluorophore_count: float
     # random int64 as specified in the opensimplex docs
     seed: int = Field(
         default_factory=lambda: np.random.randint(-(2**63), 2**63 - 1),

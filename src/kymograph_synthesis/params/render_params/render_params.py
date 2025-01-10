@@ -13,6 +13,6 @@ class RenderingParams(BaseModel):
 
     static_distributions: list[FluorphoneDistributionParams] = Field(
         default=[
-            SimplexNoiseParams(scales=[5, 10], max_intensity=np.random.uniform(20, 40))
+            SimplexNoiseParams(scales=[5, 10], max_fluorophore_count=np.random.uniform(20, 40))
         ]
     )
