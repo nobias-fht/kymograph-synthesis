@@ -21,16 +21,19 @@ class ParticleSystem:
 
     @classmethod
     def on_static_path(
-        cls, static_path: StaticPath, path_positions: NDArray, intensities: NDArray
+        cls,
+        static_path: StaticPath,
+        path_positions: NDArray,
+        fluorophore_counts: NDArray,
     ):
         # static path points have to be defined in real world coordinates
         space_coords = static_path(path_positions)
-        return cls(coords=space_coords, intensities=intensities)
+        return cls(coords=space_coords, fluorophore_counts=fluorophore_counts)
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
         truth_space = cast(ms.space.Space, space.attrs["space"])
         space_coords = self.coords / np.array(truth_space.scale)
-        
+
         indices = np.round(space_coords).astype(int)
 
         # remove out of bounds indices
@@ -45,7 +48,5 @@ class ParticleSystem:
         ind_along_y = xr.DataArray(indices[:, 1], dims=["new_index"])
         ind_along_x = xr.DataArray(indices[:, 2], dims=["new_index"])
 
-        space[ind_along_z, ind_along_y, ind_along_x] += self.intensities[
-            ~out_of_bounds
-        ]
+        space[ind_along_z, ind_along_y, ind_along_x] += self.intensities[~out_of_bounds]
         return space
