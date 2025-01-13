@@ -9,29 +9,31 @@ from . import RenderingParams, DynamicsParams, KymographParams
 
 
 # for type hinting
-class ImagingParams(BaseModel): ...
+class ImagingParams(ms.Simulation):
+
+    sample: ms.Sample = Field(default=ms.Sample(labels=[]), exclude=True)
 
 
-def _build_imaging_params_class():
-    # making a copy of microsim Simulation params without "sample" field
-    _imaging_params_fields_dict = {}
-    for field_name, field_info in ms.Simulation.model_fields.items():
-        _imaging_params_fields_dict[field_name] = (field_info.annotation, field_info)
-    del _imaging_params_fields_dict["sample"]
-    return create_model(
-        "ImagingParams",
-        # adding validator like this is hacky... but there is only one so ok?
-        # this is needed because it actually alters output space
-        __validators__={
-            "_resolve_spaces": model_validator(mode="after")(
-                ms.Simulation._resolve_spaces
-            )
-        },
-        **_imaging_params_fields_dict,
-    )
+# def _build_imaging_params_class():
+#     # making a copy of microsim Simulation params without "sample" field
+#     _imaging_params_fields_dict = {}
+#     for field_name, field_info in ms.Simulation.model_fields.items():
+#         _imaging_params_fields_dict[field_name] = (field_info.annotation, field_info)
+#     del _imaging_params_fields_dict["sample"]
+#     return create_model(
+#         "ImagingParams",
+#         # adding validator like this is hacky... but there is only one so ok?
+#         # this is needed because it actually alters output space
+#         __validators__={
+#             "_resolve_spaces": model_validator(mode="after")(
+#                 ms.Simulation._resolve_spaces
+#             )
+#         },
+#         **_imaging_params_fields_dict,
+#     )
 
 
-ImagingParams = _build_imaging_params_class()
+# ImagingParams = _build_imaging_params_class()
 
 
 def _render_particle_path_points_factory(
@@ -62,7 +64,7 @@ def _render_params_default_factory(data: dict[str, Any]) -> RenderingParams:
 def _kymograph_sample_path_points_default_factory(
     data: dict[str, Any]
 ) -> list[tuple[float, float, float]]:
-    assert isinstance(data["render"], RenderingParams)
+    assert isinstance(data["rendering"], RenderingParams)
     assert isinstance(data["imaging"], ImagingParams)
 
     truth_space_shape = np.array(data["imaging"].truth_space.shape)
