@@ -8,32 +8,10 @@ import microsim.schema as ms
 from . import RenderingParams, DynamicsParams, KymographParams
 
 
-# for type hinting
+# microsim params but exclude sample, ParticleSystem and RenderingParams are elsewhere
 class ImagingParams(ms.Simulation):
 
     sample: ms.Sample = Field(default=ms.Sample(labels=[]), exclude=True)
-
-
-# def _build_imaging_params_class():
-#     # making a copy of microsim Simulation params without "sample" field
-#     _imaging_params_fields_dict = {}
-#     for field_name, field_info in ms.Simulation.model_fields.items():
-#         _imaging_params_fields_dict[field_name] = (field_info.annotation, field_info)
-#     del _imaging_params_fields_dict["sample"]
-#     return create_model(
-#         "ImagingParams",
-#         # adding validator like this is hacky... but there is only one so ok?
-#         # this is needed because it actually alters output space
-#         __validators__={
-#             "_resolve_spaces": model_validator(mode="after")(
-#                 ms.Simulation._resolve_spaces
-#             )
-#         },
-#         **_imaging_params_fields_dict,
-#     )
-
-
-# ImagingParams = _build_imaging_params_class()
 
 
 def _render_particle_path_points_factory(
