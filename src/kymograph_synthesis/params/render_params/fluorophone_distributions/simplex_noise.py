@@ -9,13 +9,13 @@ from .collection import FluoroDistrName
 
 class SimplexNoiseParams(BaseModel):
 
-    model_config = ConfigDict(validate_assignment=True)
+    model_config = ConfigDict(validate_assignment=True, validate_default=True)
 
     name: Literal[FluoroDistrName.SIMPLEX_NOISE] = FluoroDistrName.SIMPLEX_NOISE
 
-    noise_scales: list[float]
+    noise_scales: list[float] = [1, 0.25]
     scale_weights: list[float] = Field(
-        default_factory=lambda data: [1 for _ in range(len(data["scales"]))],
+        default_factory=lambda data: [1 for _ in range(len(data["noise_scales"]))],
         validate_default=True,
     )
     max_fluorophore_count: float
@@ -27,7 +27,7 @@ class SimplexNoiseParams(BaseModel):
 
     @model_validator(mode="after")
     def validate_scales_and_weights_length(self) -> Self:
-        if len(self.scales) != len(self.scale_weights):
+        if len(self.noise_scales) != len(self.scale_weights):
             raise ValueError(
                 f"Length of `scales` and `scale_weights`, {len(self.scales)} and "
                 f"{len(self.scale_weights)}, are not the same."
