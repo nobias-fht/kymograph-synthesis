@@ -2,11 +2,12 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import ConfigDict, BaseModel, Field, create_model, model_validator
+from pydantic import ConfigDict, BaseModel, Field
 import microsim.schema as ms
 
-from . import RenderingParams, DynamicsParams, KymographParams
-
+from .render_params import RenderingParams
+from .dynamics_params import DynamicsParams
+from .kymograph_params import KymographParams
 
 # microsim params but exclude sample, ParticleSystem and RenderingParams are elsewhere
 class ImagingParams(ms.Simulation):
