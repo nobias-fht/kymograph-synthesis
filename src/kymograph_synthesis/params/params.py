@@ -2,42 +2,50 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import ConfigDict, BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field, model_validator, TypeAdapter
 import microsim.schema as ms
 
 from .render_params import RenderingParams
 from .dynamics_params import DynamicsParams
 from .kymograph_params import KymographParams
 
+
 # microsim params but exclude sample, ParticleSystem and RenderingParams are elsewhere
 class ImagingParams(ms.Simulation):
 
-    sample: ms.Sample = Field(default=ms.Sample(labels=[]), exclude=True)
+    # use default factory to avoid same reference to labels list in each instance
+    # (even though this is here as a dummy var)
+    sample: ms.Sample = Field(
+        default_factory=lambda: ms.Sample(labels=[]), exclude=True
+    )
+
+    _truth_space_scale_default: tuple[float, float, float] = (0.04, 0.01, 0.01)
+
+    truth_space: ms.ShapeScaleSpace = ms.ShapeScaleSpace(
+        shape=(32, 64, 512), scale=_truth_space_scale_default
+    )
+
+    output_space: ms.space.Space = Field(default=ms.DownscaledSpace(downscale=4))
+
+    modality: ms.Modality = Field(default=ms.Widefield())
+
+    detector: ms.detectors.Detector = Field(
+        default=ms.CameraCCD(qe=1, read_noise=4, bit_depth=12, offset=100)
+    )
+
+    exposure_ms: float = 200
+
+    @model_validator(mode="before")
+    @classmethod
+    def set_truth_space_scale_default(cls, data: dict[str, Any]) -> dict[str, Any]:
+        non_default_truth_space = "truth_space" in data
+        if non_default_truth_space and isinstance(data["truth_space"], dict):
+            if "scale" not in data["truth_space"]:
+                data["truth_space"]["scale"] = cls._truth_space_scale_default.default
+        return data
 
 
-def _render_particle_path_points_factory(
-    data: dict[str, Any]
-) -> list[tuple[float, float, float]]:
-    truth_space_shape = np.array(data["imaging"].truth_space.shape)
-
-    n_points = 4
-    x = np.zeros(n_points, dtype=float)
-    x[0] = 0.1
-    x[1:-1] = np.sort(np.random.uniform(0.2, 0.8, n_points - 2))
-    x[-1] = 0.9
-    y = np.random.uniform(0.1, 0.9, n_points)
-    z = np.random.uniform(0.1, 0.9, n_points)
-
-    isotropic_points = np.array([(zi, yi, xi) for zi, yi, xi in zip(z, y, x)])
-    # points are expressed as a ratio of the x dimension
-    points = isotropic_points * truth_space_shape / truth_space_shape[2]
-
-    return [(zi, yi, xi) for zi, yi, xi in points]
-
-
-def _render_params_default_factory(data: dict[str, Any]) -> RenderingParams:
-    path_points = _render_particle_path_points_factory(data)
-    return RenderingParams(particle_path_points=path_points)
+# TODO: move truth space shape to rendering?
 
 
 def _kymograph_sample_path_points_default_factory(
@@ -49,17 +57,18 @@ def _kymograph_sample_path_points_default_factory(
     truth_space_shape = np.array(data["imaging"].truth_space.shape)
     z_dims = truth_space_shape[0]
     z_mid = z_dims / 2
-    # relative path points are expressed as a ratio of the x dimension
+    # relative path points are expressed as a ratio of the 
     relative_particle_path_points: NDArray[np.float_] = np.array(
         data["rendering"].particle_path_points, dtype=float
     )
     # path_points in pixel index space coordinates
     particle_path_points: NDArray[np.float_] = (
-        relative_particle_path_points * truth_space_shape[2]
+        relative_particle_path_points * truth_space_shape
     )
     sample_path_points = particle_path_points.copy()
     # replace z with the mid point of the stack for sampling
     sample_path_points[:, 0] = z_mid
+    sample_path_points = sample_path_points / data["imaging"].output_space.downscale
     return [(zi, yi, xi) for zi, yi, xi in sample_path_points]
 
 
@@ -74,15 +83,9 @@ class Params(BaseModel):
 
     dynamics: DynamicsParams = DynamicsParams()
 
-    imaging: "ImagingParams" = ImagingParams(
-        truth_space=ms.ShapeScaleSpace(shape=(32, 64, 512), scale=(0.04, 0.01, 0.01)),
-        output_space={"downscale": 4},
-        modality=ms.Widefield(),
-        detector=ms.CameraCCD(qe=1, read_noise=4, bit_depth=12, offset=100),
-        exposure_ms=100,
-    )
+    rendering: RenderingParams = RenderingParams()
 
-    rendering: RenderingParams = Field(default_factory=_render_params_default_factory)
+    imaging: ImagingParams = ImagingParams()
 
     kymograph: KymographParams = Field(
         default_factory=_kymograph_params_default_factory

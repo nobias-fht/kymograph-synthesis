@@ -18,7 +18,7 @@ class SimplexNoiseParams(BaseModel):
         default_factory=lambda data: [1 for _ in range(len(data["noise_scales"]))],
         validate_default=True,
     )
-    max_fluorophore_count: float
+    max_fluorophore_count_per_nm3: float
     # random int64 as specified in the opensimplex docs
     seed: int = Field(
         default_factory=lambda: np.random.randint(-(2**63), 2**63 - 1),

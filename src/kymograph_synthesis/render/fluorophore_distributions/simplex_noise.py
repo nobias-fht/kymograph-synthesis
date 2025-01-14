@@ -14,13 +14,14 @@ class SimplexNoise:
         self,
         noise_scales: list[float],
         scale_weights: list[float],
-        max_fluorophore_count: float,
+        max_fluorophore_count_per_nm3: float,
         seed: int,
     ):
         self._seed = seed
         self._noise_scales = noise_scales
         self._scale_weights = scale_weights
-        self._max_intensity = max_fluorophore_count
+        # max fluorphore_count per nm
+        self._max_fluorophore_count_per_nm3 = max_fluorophore_count_per_nm3
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
         truth_space = cast(ms.space.Space, space.attrs["space"])
@@ -40,7 +41,11 @@ class SimplexNoise:
             ]
             noise_array += weight * opensimplex.noise3array(*reversed(noise_grid))
 
-        noise_array = (noise_array / noise_array.max()) * self._max_intensity
+        noise_array = (
+            (noise_array / noise_array.max())
+            * (self._max_fluorophore_count_per_nm3 * 1e6) # per um3
+            * np.prod(scale)
+        )
         # clip < 0
         noise_array[noise_array < 0] = 0
         return noise_array

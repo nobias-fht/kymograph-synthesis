@@ -20,6 +20,7 @@ class ParticleSimulator:
         retro_speed_distr: Callable[[], float],
         velocity_noise_distr: Callable[[], float],
         transition_matrix: TransitionMatrixType,
+        rng: np.random.Generator
     ):
         self._antero_speed_distr = antero_speed_distr
         self._retro_speed_distr = retro_speed_distr
@@ -35,6 +36,8 @@ class ParticleSimulator:
         self.intensity_decay_rate = np.log(2)/intensity_half_life
 
         self.step_count = 0
+        
+        self.rng = rng
 
     def step(self):
         self.step_count += 1
@@ -56,7 +59,7 @@ class ParticleSimulator:
     def next_state_transition(self) -> MotionStateCollection:
         transition_probs = self._transition_matrix[self.state]
 
-        decision_prob = np.random.random()
+        decision_prob = self.rng.random()
         cumulative_prob = 0
         for transition_state, prob in transition_probs.items():
             cumulative_prob += prob

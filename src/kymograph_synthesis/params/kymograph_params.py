@@ -8,7 +8,7 @@ class KymographParams(BaseModel):
 
     sample_path_points: list[tuple[float, float, float]]
 
-    path_clip: tuple[float, float]=[0.1, 0.9]
+    path_clip: tuple[float, float]=[0, 1]
 
     interpolation: Optional[
         Literal[

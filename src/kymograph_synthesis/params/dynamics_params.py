@@ -31,7 +31,7 @@ def speed_variance_from_normal_std(
 def retro_var_default_factory(normal_std: PositiveFloat):
     def inner(data: dict[str, Any]) -> PositiveFloat:
         return speed_variance_from_normal_std(
-            speed_mode=data["retro_mode"], normal_std=normal_std
+            speed_mode=data["retro_speed_mode"], normal_std=normal_std
         )
 
     return inner
@@ -40,7 +40,7 @@ def retro_var_default_factory(normal_std: PositiveFloat):
 def antero_var_default_factory(normal_std: PositiveFloat):
     def inner(data: dict[str, Any]) -> PositiveFloat:
         return speed_variance_from_normal_std(
-            speed_mode=data["antero_mode"], normal_std=normal_std
+            speed_mode=data["antero_speed_mode"], normal_std=normal_std
         )
 
     return inner
@@ -83,13 +83,13 @@ class DynamicsParams(BaseModel):
     )
     """Average particle density. Units are number of particles per path."""
 
-    retro_mode: PositiveFloat = Field(default_factory=lambda: np.random.uniform(0.5, 6))
+    retro_speed_mode: PositiveFloat = Field(default_factory=lambda: np.random.uniform(0.5, 6))
     """
     Mode of particle speed in the retrograde direction, modeled by a log-normal 
     distribution. Units are percentage of path per simulation time step.
     """
 
-    retro_var: PositiveFloat = Field(
+    retro_speed_var: PositiveFloat = Field(
         default_factory=retro_var_default_factory(normal_std=0.1)
     )
     """
@@ -97,7 +97,7 @@ class DynamicsParams(BaseModel):
     distribution. Units are percentage of path per simulation time step.
     """
 
-    antero_mode: PositiveFloat = Field(
+    antero_speed_mode: PositiveFloat = Field(
         default_factory=lambda: np.random.uniform(0.5, 6)
     )
     """
@@ -105,7 +105,7 @@ class DynamicsParams(BaseModel):
     distribution. Units are percentage of path per simulation time step.
     """
 
-    antero_var: PositiveFloat = Field(
+    antero_speed_var: PositiveFloat = Field(
         default_factory=antero_var_default_factory(normal_std=0.1)
     )
     """
@@ -113,32 +113,32 @@ class DynamicsParams(BaseModel):
     distribution.
     """
 
-    noise_var: PositiveFloat = Field(default_factory=lambda: np.random.uniform(0, 0.4))
+    velocity_noise_var: PositiveFloat = Field(default_factory=lambda: np.random.uniform(0, 0.4))
     """
     Variance of the velocity noise, modeled by a Gaussian distribution. Units are 
     percentage of path per simulation time step.
     """
 
-    intensity_mode: PositiveFloat = Field(
+    fluorophore_count_mode: PositiveFloat = Field(
         default_factory=lambda: np.random.uniform(200, 400)
     )
     """
     Mode of the particle intensities, modeled by a log-normal distribution.
     """
 
-    intensity_var: PositiveFloat = Field(
+    fluorophore_count_var: PositiveFloat = Field(
         default_factory=lambda: np.random.uniform(0, 30**2)
     )
     """Variance of the particle intensities, modeled by a log-normal distribution."""
 
-    intensity_halflife_mode: PositiveFloat = Field(
+    fluorophore_halflife_mode: PositiveFloat = Field(
         default_factory=lambda data: np.random.uniform(
             data["n_steps"] * 0.5, data["n_steps"] * 1.5
         )
     )
     """Mode of particle intensity half-life, modeled by a log-normal distribution."""
 
-    intensity_halflife_var: PositiveFloat = Field(
+    fluorophore_halflife_var: PositiveFloat = Field(
         default_factory=lambda data: np.random.uniform(
             data["n_steps"] * 0.5 / 10, data["n_steps"] * 1.5 / 10
         )

@@ -87,15 +87,21 @@ def create_particle_simulators(
     antero_speed_var: float,
     retro_speed_mode: float,
     retro_speed_var: float,
-    intensity_mode: float,
-    intensity_var: float,
-    intensity_half_life_mode: float,
-    intensity_half_life_var: float,
-    velocity_noise_std: float,
+    velocity_noise_var: float,
+    fluorophore_count_mode: float,
+    fluorophore_count_var: float,
+    fluorophore_halflife_mode: float,
+    fluorophore_halflife_var: float,
     transition_matrix: TransitionMatrixType,
     n_steps: int,
     rng: np.random.Generator,
 ) -> list[ParticleSimulator]:
+    
+    antero_speed_mode = antero_speed_mode*1e-2
+    antero_speed_var = antero_speed_var*1e-2
+    retro_speed_mode = retro_speed_mode*1e-2
+    retro_speed_var = retro_speed_var*1e-2
+    velocity_noise_var = velocity_noise_var*1e-2
 
     markov_stationary_state = calc_markov_stationary_state(transition_matrix, rng=rng)
 
@@ -104,9 +110,11 @@ def create_particle_simulators(
     path_start = 0 - buffer_distance
     path_end = 1 + buffer_distance
 
-    initial_intensity_distr = log_normal_distr(intensity_mode, intensity_var, rng=rng)
+    initial_intensity_distr = log_normal_distr(
+        fluorophore_count_mode, fluorophore_count_var, rng=rng
+    )
     intensity_half_life_distr = log_normal_distr(
-        intensity_half_life_mode, intensity_half_life_var, rng=rng
+        fluorophore_halflife_mode, fluorophore_halflife_var, rng=rng
     )
 
     n_particles = int(np.round((path_end - path_start) * particle_density))
@@ -123,8 +131,11 @@ def create_particle_simulators(
             ),
             initial_intensity=initial_intensity_distr(),
             intensity_half_life=intensity_half_life_distr(),
-            velocity_noise_distr=partial(rng.normal, loc=0, scale=velocity_noise_std),
+            velocity_noise_distr=partial(
+                rng.normal, loc=0, scale=velocity_noise_var**0.5
+            ),
             transition_matrix=transition_matrix,
+            rng=rng
         )
         for _ in range(n_particles)
     ]
