@@ -8,13 +8,15 @@ import numpy as np
 
 def _render_particle_path_points_factory(
 ) -> list[tuple[float, float, float]]:
-    n_points = 4
+    n_points = 5
     x = np.zeros(n_points, dtype=float)
-    x[0] = 0.1
-    x[1:-1] = np.sort(np.random.uniform(0.2, 0.8, n_points - 2))
-    x[-1] = 0.9
+    x[0] = np.random.uniform(0.1, 0.4)
+    x[1:] = np.sort(np.random.uniform(x[0], 0.9, n_points - 1))
+    if x[3] - x[0] < 0.4:
+        x[3] = np.random.uniform(x[0] + 0.4, 0.9)
+
     y = np.random.uniform(0.1, 0.9, n_points)
-    z = np.random.uniform(0.1, 0.9, n_points)
+    z = np.random.normal(0.5, 0.1, n_points)
 
     anisotropic_points = np.array([(zi, yi, xi) for zi, yi, xi in zip(z, y, x)])
 
