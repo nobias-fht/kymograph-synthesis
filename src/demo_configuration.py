@@ -52,19 +52,19 @@ params = Params(
         "fluorophore_halflife_var": 0.6,
     },
     rendering={
-        "particle_path_points": [
-            (0.5, 0.9, 0.1),
-            (0.5, 0.2, 0.7),
-            (0.7, 0.9, 0.8),
-            (0.8, 0.1, 0.9),
-        ],
+        # "particle_path_points": [
+        #     (0.5, 0.9, 0.1),
+        #     (0.5, 0.2, 0.7),
+        #     (0.7, 0.9, 0.8),
+        #     (0.8, 0.1, 0.9),
+        # ],
         "static_distributions": [
-            {"name": "simplex_noise", "max_fluorophore_count_per_nm3": 0.08, "seed": 42}
+            {"name": "simplex_noise", "max_fluorophore_count_per_nm3": 0.005, "seed": 420}
         ],
     },
     imaging={
-        "exposure_ms": 100,
-        "truth_space": {"shape": [16, 64, 512], "scale": [0.04, 0.01, 0.01]},
+        "exposure_ms": 50,
+        "truth_space": {"shape": [16, 64, 512], "scale": [0.04, 0.02, 0.02]},
         "settings": {"random_seed": 420000},
     },
 )
@@ -79,18 +79,6 @@ particles = create_particle_simulators(
 particle_positions, particle_fluorophore_count, particle_states = (
     run_dynamics_simulation(params.dynamics.n_steps, particles)
 )
-
-# visualisation_path_points = [
-#     np.array(point) * np.array(params.imaging.truth_space.shape)
-#     for point in params.rendering.particle_path_points
-# ]
-# visualisation_path = PiecewiseQuadraticBezierPath(visualisation_path_points)
-# plot_points = visualisation_path(np.linspace(0, 1, 128))
-# plt.figure()
-# plt.plot(plot_points[:, 2], plot_points[:, 1])
-# plt.ylim(0, params.imaging.truth_space.shape[1])
-# plt.xlim(0, params.imaging.truth_space.shape[2])
-# # plt.show()
 
 particle_path_points_um = [
     np.array(point)
@@ -129,7 +117,6 @@ kymograph_path_points = [
 kymo_sample_path = PiecewiseQuadraticBezierPath(kymograph_path_points)
 n_path_units = int(np.floor(kymo_sample_path.length()))
 n_spatial_samples = int(np.floor(kymo_sample_path.length() * 1.2))
-# n_spatial_samples = n_path_units
 spatial_samples = np.linspace(0, 1, n_spatial_samples)
 path_samples = np.linspace(0, 1, n_path_units)
 kymograph = np.zeros((params.dynamics.n_steps, n_spatial_samples))
@@ -182,10 +169,6 @@ kymo_ax.imshow(kymograph, cmap="gray")
 kymo_ax.set_xlabel("Distance")
 kymo_ax.set_ylabel("Time")
 kymo_ax.set_title("Kymograph")
-# for p in range(particle_positions.shape[1]):
-#     kymo_ax.plot(particle_positions[:,p]*(n_spatial_samples-1), np.arange(params.dynamics.n_steps), alpha=0.8)
-# kymo_ax.set_xlim(0, n_spatial_samples-1)
-# kymo_ax.set_ylim(0, params.dynamics.n_steps-1)
 
 fig, ax = plt.subplots()
 for p in range(particle_positions.shape[1]):
