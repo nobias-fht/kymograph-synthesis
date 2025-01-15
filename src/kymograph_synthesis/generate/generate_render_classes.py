@@ -7,6 +7,8 @@ from ..params.render_params import RenderingParams, FluoroDistrName
 from ..render.fluorophore_distributions import SimplexNoise, ParticleSystem
 from ..render.static_path import PiecewiseQuadraticBezierPath
 
+# TODO: a little ugly (see other todos)
+
 def generate_render_classes(
     params: RenderingParams,
     particle_positions: NDArray[np.float_],
@@ -19,9 +21,18 @@ def generate_render_classes(
         fluoro_distr_factory(**fluoro_distr_params)
         for fluoro_distr_params in params.static_distributions
     ]
+    particle_system_gen = create_particle_system_generator(
+        params.particle_path_points,
+        particle_positions,
+        particle_fluorophore_count,
+        truth_space_shape, 
+        truth_space_scale,
+    )
+    # TODO: maybe want to make this nicer and return time varying params
+    return static_distributions, particle_system_gen
 
 
-def particle_system_generator(
+def create_particle_system_generator(
     particle_path_points: list[tuple[float, float, float]],
     particle_positions: NDArray[np.float_],
     particle_fluorophore_count: NDArray[np.float_],
