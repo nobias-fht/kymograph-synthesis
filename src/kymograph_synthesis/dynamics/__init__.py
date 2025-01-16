@@ -5,4 +5,4 @@ __all__ = [
     "run_dynamics_simulation"
 ]
 
-from system_simulator import create_particle_simulators, run_dynamics_simulation
+from .system_simulator import create_particle_simulators, run_dynamics_simulation
