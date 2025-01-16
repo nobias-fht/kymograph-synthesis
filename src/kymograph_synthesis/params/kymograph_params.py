@@ -8,20 +8,19 @@ class KymographParams(BaseModel):
 
     sample_path_points: list[tuple[float, float, float]]
 
-    path_clip: tuple[float, float]=[0, 1]
+    n_spatial_values_factor: float = 1.2
 
-    interpolation: Optional[
-        Literal[
-            "linear",
-            "nearest",
-            "nearest-up",
-            "zero",
-            "slinear",
-            "quadratic",
-            "cubic",
-            "previous",
-            "next",
-        ]
+    interpolation: Literal[
+        "none",
+        "linear",
+        "nearest",
+        "nearest-up",
+        "zero",
+        "slinear",
+        "quadratic",
+        "cubic",
+        "previous",
+        "next",
     ] = "cubic"
 
     @field_validator("path_clip")

@@ -1,63 +1,57 @@
-from typing import Literal, Optional
+from typing import Optional
+from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import interp1d
 
-from .render.static_path import StaticPath
+from ..params import KymographParams
+from ..render.static_path import PiecewiseQuadraticBezierPath
 
+@dataclass
+class SampleKymographOutput:
+    kymograph: NDArray
+    path_length_pixels: float
+    n_spatial_values: int
 
+# TODO: output ndarray type, see if interp changes it.
 def sample_kymograph(
-    image_stack: NDArray,
-    sample_path: StaticPath,
-    path_clip: tuple[float, float],
-    n_spatial_samples: int,
-    interpolation: Optional[
-        Literal[
-            "linear",
-            "nearest",
-            "nearest-up",
-            "zero",
-            "slinear",
-            "quadratic",
-            "cubic",
-            "previous",
-            "next",
-        ]
-    ],
+    params: KymographParams,
+    frames: NDArray[np.uint16],
 ) -> NDArray:
-    """
-    Parameters
-    ----------
-    image_stack : numpy.ndarray
-        Has shape T(Z)YX.
-    sample_path : StaticPath
-        Path along which samples are taken to create a kympgraph.
-    n_spatial_samples : int
-        Number of spatial samples.
-    """
-    n_time_samples = image_stack.shape[0]
-    n_path_units = np.floor(sample_path.length())
+    sample_path = PiecewiseQuadraticBezierPath(params.sample_path_points)
+
+    n_time_samples = frames.shape[0]
+    path_length_pixels = sample_path.length()
+    n_path_units = int(np.floor(path_length_pixels))
     path_samples = np.linspace(0, 1, n_path_units)
     coords = sample_path(path_samples)
     indices = np.round(coords).astype(int)
 
+    if params.interpolation != "none":
+        n_spatial_values = n_path_units * params * params.n_spatial_values_factor
+    else:
+        n_spatial_values = n_path_units
     # place holder
-    kymograph = np.zeros((n_time_samples, n_spatial_samples))
+    kymograph = np.zeros((n_time_samples, n_spatial_values))
 
     # sample
     for t in range(n_time_samples):
-        sample = image_stack[t, *[indices[:, i] for i in range(indices.shape[1])]]
-        if interpolation is not None:
+        sample = frames[t, *[indices[:, i] for i in range(indices.shape[1])]]
+        if params.interpolation != "none":
             sample = inter_pixel_interp(
                 path_samples,
                 indices,
                 sample,
-                interpolation=interpolation,
-                new_path_samples=np.linspace(*path_clip, n_spatial_samples),
+                interpolation=params.interpolation,
+                new_path_samples=np.linspace(0, 1, n_spatial_values),
             )
         kymograph[t] = sample
-
+    return SampleKymographOutput(
+        kymograph=kymograph,
+        path_length_pixels=path_length_pixels,
+        n_spatial_values=n_spatial_values
+    )
 
 def inter_pixel_interp(
     path_samples: NDArray,
