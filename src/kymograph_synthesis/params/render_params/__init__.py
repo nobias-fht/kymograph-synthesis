@@ -1,5 +1,6 @@
 __all__ = [
     "RenderingParams",
+    "ImagingParams",
     "SimplexNoiseParams",
     "FluoroDistrName",
     "FluoroDistrParams"
@@ -11,3 +12,4 @@ from .fluorophone_distributions import (
     FluoroDistrName,
     FluoroDistrParams,
 )
+from .imaging_params import ImagingParams
