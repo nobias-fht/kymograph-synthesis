@@ -29,3 +29,7 @@ class Pipeline:
             particle_positions=self.simulate_dynamics_output.particle_positions,
             particle_states=self.simulate_dynamics_output.particle_states
         )
+
+    def save(self):
+        # TODO: save params and outputs
+        ...
