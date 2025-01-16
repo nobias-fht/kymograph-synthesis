@@ -1,8 +1,17 @@
+from dataclasses import dataclass
+
 import numpy as np
 from numpy.typing import NDArray
 from ..params import DynamicsParams
 from ..dynamics import create_particle_simulators, run_dynamics_simulation
 
+
+@dataclass
+class DynamicsOutput:
+    n_steps: int
+    particle_positions: NDArray[np.float_]
+    particle_fluorophore_count: NDArray[np.float_]
+    particle_states: NDArray[np.int_]
 
 def generate_dynamics(
     params: DynamicsParams,
@@ -14,4 +23,9 @@ def generate_dynamics(
     particle_positions, particle_fluorophore_count, particle_states = (
         run_dynamics_simulation(params.n_steps, particles)
     )
-    return particle_positions, particle_fluorophore_count, particle_states
+    return DynamicsOutput(
+        n_steps=params.n_steps,
+        particle_positions=particle_positions, 
+        particle_fluorophore_count=particle_fluorophore_count, 
+        particle_states=particle_states
+    )
