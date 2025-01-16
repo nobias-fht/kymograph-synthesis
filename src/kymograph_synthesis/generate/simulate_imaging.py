@@ -1,4 +1,5 @@
 from typing import Generator
+from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
@@ -6,13 +7,13 @@ import microsim.schema as ms
 
 from ..params.render_params import (
     RenderingParams,
-    ImagingParams,
     FluoroDistrName,
     FluoroDistrParams,
 )
 from ..render.fluorophore_distributions import SimplexNoise, ParticleSystem
 from ..render.static_path import PiecewiseQuadraticBezierPath
 
+@dataclass
 class ImagingSimOutput:
     frames: NDArray[np.uint16]
     path_length_um = float
