@@ -67,7 +67,7 @@ class PiecewiseLinearPath:
         return result
 
     def length(self) -> float:
-        raise NotImplementedError
+        raise [segment.length() for segment in self.linear_path_segments]
 
 
 class QuadraticBezierPath:
@@ -100,7 +100,7 @@ class QuadraticBezierPath:
         x = np.concatenate([np.array([0]), np.cumsum(lengths) / np.cumsum(lengths)[-1]])
         return interp1d(x, np.linspace(0, 1.0, n))
 
-    def _calc_lengths(self, n=128) -> NDArray:
+    def _calc_lengths(self, n=128) -> NDArray[np.float_]:
         samples = np.linspace(0, 1, n)
         coords = self._bezier_func(samples)
         vecs = coords[1:] - coords[:-1]
