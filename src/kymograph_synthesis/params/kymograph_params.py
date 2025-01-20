@@ -22,14 +22,3 @@ class KymographParams(BaseModel):
         "previous",
         "next",
     ] = "cubic"
-
-    @field_validator("path_clip")
-    @classmethod
-    def validate_path_clip(cls, value: tuple[float, float]):
-        for i, v in enumerate(value):
-            if (0 > v) or (v > 1):
-                raise ValueError(
-                    f"Values for `path_clip` must be in [0, 1], found value {v} at "
-                    f"position {i}."
-                )
-        return value

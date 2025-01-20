@@ -19,7 +19,10 @@ def sample_kymograph(
     params: KymographParams,
     frames: NDArray[np.uint16],
 ) -> NDArray:
-    sample_path = PiecewiseQuadraticBezierPath(params.sample_path_points)
+    sample_path_points = [
+        np.array(point) for point in params.sample_path_points
+    ]
+    sample_path = PiecewiseQuadraticBezierPath(sample_path_points)
 
     n_time_samples = frames.shape[0]
     path_length_pixels = sample_path.length()
@@ -29,7 +32,7 @@ def sample_kymograph(
     indices = np.round(coords).astype(int)
 
     if params.interpolation != "none":
-        n_spatial_values = n_path_units * params * params.n_spatial_values_factor
+        n_spatial_values = int(np.round(n_path_units * params.n_spatial_values_factor))
     else:
         n_spatial_values = n_path_units
     # place holder
