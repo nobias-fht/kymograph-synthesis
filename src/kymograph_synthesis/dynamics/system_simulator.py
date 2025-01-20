@@ -9,8 +9,7 @@ from .particle_simulator.particle_simulator import (
     TransitionMatrixType,
     ParticleSimulator,
 )
-from .particle_simulator.motion_state_collection import MotionStateCollection
-
+from .particle_simulator.motion_state_collection import MotionStateCollection, STATE_INDEX_MAPPING
 
 def calc_markov_stationary_state(
     markov_transition_matrix: TransitionMatrixType, rng: np.random.Generator
@@ -152,7 +151,7 @@ def run_dynamics_simulation(
         for j, particle in enumerate(particle_simulators):
             positions[i, j] = particle.position
             intensities[i, j] = particle.intensity
-            states[i, j] = particle.state.value
+            states[i, j] = STATE_INDEX_MAPPING[particle.state]
             particle.step()
 
     return positions, intensities, states
