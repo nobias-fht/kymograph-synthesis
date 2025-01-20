@@ -79,12 +79,12 @@ class RenderingParams(BaseModel):
 
 
 def _random_relative_particle_path_points() -> list[tuple[float, float, float]]:
-    n_points = 5
+    n_points = 4
     x = np.zeros(n_points, dtype=float)
-    x[0] = np.random.uniform(0.1, 0.4)
+    x[0] = np.random.uniform(0.1, 0.3)
     x[1:] = np.sort(np.random.uniform(x[0], 0.9, n_points - 1))
-    if x[-1] - x[0] < 0.4:
-        x[-1] = np.random.uniform(x[0] + 0.4, 0.9)
+    if x[-1] - x[0] < 0.5:
+        x[-1] = np.random.uniform(x[0] + 0.5, 0.9)
 
     y = np.random.uniform(0.1, 0.9, n_points)
     z = np.random.normal(0.5, 0.1, n_points)
