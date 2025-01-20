@@ -13,10 +13,12 @@ from ..params.render_params import (
 from ..render.fluorophore_distributions import SimplexNoise, ParticleSystem
 from ..render.static_path import PiecewiseQuadraticBezierPath
 
+
 @dataclass
 class ImagingSimOutput:
     frames: NDArray[np.uint16]
-    path_length_um = float
+    path_length_um: float
+
 
 def simulate_imaging(
     params: RenderingParams,
@@ -24,6 +26,7 @@ def simulate_imaging(
     particle_positions: NDArray[np.float_],
     particle_fluorophore_count: NDArray[np.float_],
 ) -> NDArray[np.uint16]:
+    seed = params.imaging.settings.random_seed
 
     static_distributions = initialize_static_distributions(params.static_distributions)
     output_space_shape = params.imaging.output_space.shape
@@ -39,15 +42,17 @@ def simulate_imaging(
             particle_positions=particle_positions,
             particle_fluorophore_count=particle_fluorophore_count,
         )
+        settings = params.imaging.settings
+        settings.random_seed += t
         sim = ms.Simulation(
-            **params.model_dump(),
+            **params.imaging.model_dump(
+                exclude=["settings"]
+            ),
+            settings=settings,
             sample=ms.Sample(labels=static_distributions + [particle_system]),
         )
         frames[t] = sim.digital_image()
-    return ImagingSimOutput(
-        frames=frames,
-        path_length_um=static_path.length()
-    )
+    return ImagingSimOutput(frames=frames, path_length_um=static_path.length())
 
 
 def fluoro_distr_factory(
@@ -64,7 +69,7 @@ def initialize_static_distributions(
     static_distributions: list[FluoroDistrParams],
 ) -> list[ms.FluorophoreDistribution]:
     return [
-        fluoro_distr_factory(**fluoro_distr_params)
+        fluoro_distr_factory(**fluoro_distr_params.model_dump())
         for fluoro_distr_params in static_distributions
     ]
 
