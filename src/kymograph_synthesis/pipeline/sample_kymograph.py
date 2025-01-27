@@ -36,7 +36,7 @@ def sample_kymograph(
     else:
         n_spatial_values = n_path_units
     # place holder
-    kymograph = np.zeros((n_time_samples, n_spatial_values))
+    kymograph = np.zeros((n_time_samples, n_spatial_values), dtype=frames.dtype)
 
     # sample
     for t in range(n_time_samples):
@@ -82,4 +82,4 @@ def inter_pixel_interp(
         kind=interpolation,
         fill_value="extrapolate",
     )
-    return interp_f(new_path_samples)
+    return interp_f(new_path_samples).astype(path_samples.dtype)

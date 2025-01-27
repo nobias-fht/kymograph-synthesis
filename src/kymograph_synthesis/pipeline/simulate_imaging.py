@@ -43,7 +43,7 @@ def simulate_imaging(
             particle_fluorophore_count=particle_fluorophore_count,
         )
         settings = params.imaging.settings
-        settings.random_seed += t
+        settings.random_seed = seed + t
         sim = ms.Simulation(
             **params.imaging.model_dump(
                 exclude=["settings"]
