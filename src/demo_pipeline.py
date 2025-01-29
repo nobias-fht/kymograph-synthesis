@@ -75,7 +75,7 @@ pipeline = Pipeline(params)
 
 pipeline.run()
 
-digital_simulation = pipeline.simulate_imaging_output.frames
+digital_simulation = pipeline.imaging_sim_output.frames
 digital_display_z_index = params.rendering.imaging.output_space.shape[0] // 2
 
 digital_animation_fig, digital_animation_ax = plt.subplots()
@@ -122,7 +122,7 @@ kymogt_ax.imshow(pipeline.generate_ground_truth_output.ground_truth.any(axis=-1)
 kymogt_ax.set_xlabel("Distance")
 kymogt_ax.set_ylabel("Time")
 kymogt_ax.set_title("Kymograph GT")
-particle_positions = pipeline.simulate_dynamics_output.particle_positions
+particle_positions = pipeline.dynamics_sim_output.particle_positions
 particle_pixel_positions = particle_positions * pipeline.sample_kymograph_output.n_spatial_values
 for p in range(particle_positions.shape[1]):
     kymogt_ax.plot(particle_pixel_positions[:, p]-0.5, np.arange(particle_positions.shape[0]), alpha=0.6)

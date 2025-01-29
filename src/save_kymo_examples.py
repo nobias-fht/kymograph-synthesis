@@ -1,12 +1,7 @@
 from pathlib import Path
-from PIL import Image
 import glob
-import yaml
-from dataclasses import asdict
 
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
 
 from kymograph_synthesis.params import Params
 from kymograph_synthesis.pipeline import Pipeline
@@ -48,7 +43,7 @@ path_points = _convert_relative_to_um(
 params = Params(
     dynamics={
         "seed": 42,
-        "n_steps": 4,
+        "n_steps": 120,
         "particle_density": 8,
         "fluorophore_count_mode": 400,
         "fluorophore_count_var": 100**2,
