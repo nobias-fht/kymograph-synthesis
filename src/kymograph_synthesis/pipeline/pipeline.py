@@ -20,25 +20,27 @@ class Pipeline:
 
     def __init__(self, params: Params):
         self.params = params
-        self.simulate_dynamics_output: DynamicsSimOutput
-        self.simulate_imaging_output: ImagingSimOutput
+        self.dynamics_sim_output: DynamicsSimOutput
+        self.imaging_sim_output: ImagingSimOutput
         self.sample_kymograph_output: SampleKymographOutput
         self.generate_ground_truth_output: GenerateGroundTruthOutput
 
     def run(self):
-        self.simulate_dynamics_output = simulate_dynamics(self.params.dynamics)
-        self.simulate_imaging_output = simulate_imaging(
+        self.dynamics_sim_output = simulate_dynamics(self.params.dynamics)
+        # (alias to avoid too long line)
+        particle_fluorophore_count=self.dynamics_sim_output.particle_fluorophore_count
+        self.imaging_sim_output = simulate_imaging(
             self.params.rendering,
-            n_steps=self.simulate_dynamics_output.n_steps,
-            particle_positions=self.simulate_dynamics_output.particle_positions,
-            particle_fluorophore_count=self.simulate_dynamics_output.particle_fluorophore_count,
+            n_steps=self.dynamics_sim_output.n_steps,
+            particle_positions=self.dynamics_sim_output.particle_positions,
+            particle_fluorophore_count=particle_fluorophore_count,
         )
         self.sample_kymograph_output = sample_kymograph(
-            self.params.kymograph, frames=self.simulate_imaging_output.frames
+            self.params.kymograph, frames=self.imaging_sim_output.frames
         )
         self.generate_ground_truth_output = generate_ground_truth(
-            particle_positions=self.simulate_dynamics_output.particle_positions,
-            particle_states=self.simulate_dynamics_output.particle_states,
+            particle_positions=self.dynamics_sim_output.particle_positions,
+            particle_states=self.dynamics_sim_output.particle_states,
             n_spatial_values=self.sample_kymograph_output.n_spatial_values,
         )
 
@@ -55,8 +57,8 @@ class Pipeline:
 
     def _save_outputs(self, out_dir: Path, output_id: str):
         if (
-            (self.simulate_dynamics_output is None)
-            or (self.simulate_imaging_output is None)
+            (self.dynamics_sim_output is None)
+            or (self.imaging_sim_output is None)
             or (self.sample_kymograph_output is None)
             or (self.generate_ground_truth_output is None)
         ):
@@ -65,11 +67,11 @@ class Pipeline:
             )
         np.savez(
             out_dir / f"dynamics_sim_output_{output_id}",
-            **asdict(self.simulate_dynamics_output),
+            **asdict(self.dynamics_sim_output),
         )
         np.savez(
             out_dir / f"imaging_sim_output_{output_id}",
-            **asdict(self.simulate_imaging_output),
+            **asdict(self.imaging_sim_output),
         )
         np.savez(
             out_dir / f"sample_kymograph_output_{output_id}",
@@ -89,7 +91,7 @@ class Pipeline:
         file_path = out_dir / f"simulation_animation_{output_id}.gif"
 
         z_index = self.params.rendering.imaging.output_space.shape[0] // 2
-        raw_frames = self.simulate_imaging_output.frames[:, z_index]
+        raw_frames = self.imaging_sim_output.frames[:, z_index]
         norm = plt.Normalize(vmin=raw_frames.min(), vmax=raw_frames.max())
         cmap = cm.get_cmap("gray")
         visual_frames: NDArray[np.float_] = cmap(norm(raw_frames))
