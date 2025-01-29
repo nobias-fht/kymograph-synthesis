@@ -55,7 +55,7 @@ class Pipeline:
 
     def _save_params(self, out_dir: Path, output_id: str):
         with open(out_dir / f"params_{output_id}.yaml", "w") as f:
-            yaml.dump(self.params.model_dump(mode="json"), f)
+            yaml.dump(self.params.model_dump(mode="json"), f, sort_keys=False)
 
     def _save_outputs(self, out_dir: Path, output_id: str):
         if (
@@ -98,7 +98,7 @@ class Pipeline:
         cmap = cm.get_cmap("gray")
         visual_frames: NDArray[np.float_] = cmap(norm(raw_frames))
         images = [
-            Image.fromarray((frame * 255).astype(np.uint8), mode="RGBA")
+            Image.fromarray((_resize_image(frame, factor=4) * 255).astype(np.uint8), mode="RGBA")
             for frame in visual_frames
         ]
         images[0].save(
