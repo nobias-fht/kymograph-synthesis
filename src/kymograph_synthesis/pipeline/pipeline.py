@@ -42,6 +42,13 @@ class Pipeline:
             n_spatial_values=self.sample_kymograph_output.n_spatial_values,
         )
 
+    def save(self, out_dir: Path, save_visualization: bool = True):
+        output_id = self._create_id(out_dir=out_dir)
+        self._save_params(out_dir=out_dir, output_id=output_id)
+        self._save_outputs(out_dir=out_dir, output_id=output_id)
+        if save_visualization:
+            self._save_visualization(out_dir=out_dir, output_id=output_id)
+
     def _save_params(self, out_dir: Path, output_id: str):
         with open(out_dir / f"params_{output_id}.yaml", "w") as f:
             yaml.dump(self.params.model_dump(mode="json"), f)
@@ -104,7 +111,7 @@ class Pipeline:
         kymograph_resized = _resize_image(kymograph_raw, factor=4)
         plt.imsave(
             file_path,
-            kymograph_resized,
+            np.squeeze(kymograph_resized),
             cmap="gray",
         )
 
@@ -114,7 +121,7 @@ class Pipeline:
         kymograph_gt_resized = _resize_image(kymograph_gt_raw, factor=4)
         plt.imsave(
             file_path,
-            kymograph_gt_resized,
+            np.squeeze(kymograph_gt_resized),
             cmap="gray",
         )
 
@@ -131,21 +138,14 @@ class Pipeline:
             new_id = max(existing_ids) + 1
         return "{1:0{0}d}".format(n_digits, new_id)
 
-    def save(self, out_dir: Path, save_visualization: bool = True):
-        output_id = self._create_id(out_dir=out_dir)
-        self._save_params(out_dir=out_dir, output_id=output_id)
-        self._save_outputs(out_dir=out_dir, output_id=output_id)
-        if save_visualization:
-            self._save_visualization(out_dir=out_dir, output_id=output_id)
-
 
 def _resize_image(image: NDArray, factor: int) -> NDArray:
     return np.repeat(
         np.repeat(
             image,
-            repeats=int,
-            axis=-1,
+            repeats=factor,
+            axis=0,
         ),
-        repeats=int,
-        axis=-2,
+        repeats=factor,
+        axis=1,
     )

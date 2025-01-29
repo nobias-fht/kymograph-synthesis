@@ -48,7 +48,7 @@ path_points = _convert_relative_to_um(
 params = Params(
     dynamics={
         "seed": 42,
-        "n_steps": 121,
+        "n_steps": 4,
         "particle_density": 8,
         "fluorophore_count_mode": 400,
         "fluorophore_count_var": 100**2,
@@ -84,39 +84,4 @@ params = Params(
 
 pipeline = Pipeline(params)
 pipeline.run()
-
-# save params
-with open(root_dir / f"params_{index:03d}.yaml", "w") as f:
-    yaml.dump(params.model_dump(mode="json"), f)
-
-# save visual
-plt.imsave(
-    root_dir / f"kymo_{index:03d}.png",
-    pipeline.sample_kymograph_output.kymograph,
-    cmap="gray",
-)
-plt.imsave(
-    root_dir / f"kymogt_{index:03d}.png",
-    pipeline.generate_ground_truth_output.ground_truth,
-    cmap="gray",
-)
-
-# make visual gif
-z_index = params.rendering.imaging.output_space.shape[0] // 2
-raw_frames = np.array([frame[z_index] for frame in pipeline.simulate_imaging_output.frames])
-norm = plt.Normalize(vmin=raw_frames.min(), vmax=raw_frames.max())
-visual_frames = [cm.gray(norm(frame)) for frame in raw_frames]
-images = [Image.fromarray((frame*255).astype(np.uint8), mode="RGBA") for frame in visual_frames]
-images[0].save(
-    root_dir / f"anim_{index:03d}.gif",
-    save_all=True,
-    append_images=images[1:],
-    optimize=False,
-    duration=0.2,
-)
-
-# save raw
-np.savez(root_dir / f"dynamics_sim_output_{index:03d}", **asdict(pipeline.simulate_dynamics_output))
-np.savez(root_dir / f"imaging_sim_output_{index:03d}", **asdict(pipeline.simulate_imaging_output))
-np.savez(root_dir / f"sample_kymograph_output_{index:03d}", **asdict(pipeline.sample_kymograph_output))
-np.savez(root_dir / f"generate_ground_truth_output_{index:03d}", **asdict(pipeline.generate_ground_truth_output))
+pipeline.save(root_dir)
