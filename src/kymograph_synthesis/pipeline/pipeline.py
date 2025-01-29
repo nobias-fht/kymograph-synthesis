@@ -1,3 +1,4 @@
+from typing import Optional
 from pathlib import Path
 import yaml
 from PIL import Image
@@ -19,28 +20,30 @@ class Pipeline:
 
     def __init__(self, params: Params):
         self.params = params
-        self.dynamics_sim_output: DynamicsSimOutput
-        self.imaging_sim_output: ImagingSimOutput
-        self.sample_kymograph_output: SampleKymographOutput
-        self.generate_ground_truth_output: GenerateGroundTruthOutput
+        self.dynamics_sim_output: Optional[DynamicsSimOutput] = None
+        self.imaging_sim_output: Optional[ImagingSimOutput] = None
+        self.sample_kymograph_output: Optional[SampleKymographOutput] = None
+        self.generate_ground_truth_output: Optional[GenerateGroundTruthOutput] = None
 
     def run(self):
         self.dynamics_sim_output = simulate_dynamics(self.params.dynamics)
         # (alias to avoid too long line)
-        particle_fluorophore_count = self.dynamics_sim_output.particle_fluorophore_count
+        particle_fluorophore_count = self.dynamics_sim_output[
+            "particle_fluorophore_count"
+        ]
         self.imaging_sim_output = simulate_imaging(
             self.params.rendering,
-            n_steps=self.dynamics_sim_output.n_steps,
-            particle_positions=self.dynamics_sim_output.particle_positions,
+            n_steps=self.dynamics_sim_output["n_steps"],
+            particle_positions=self.dynamics_sim_output["particle_positions"],
             particle_fluorophore_count=particle_fluorophore_count,
         )
         self.sample_kymograph_output = sample_kymograph(
-            self.params.kymograph, frames=self.imaging_sim_output.frames
+            self.params.kymograph, frames=self.imaging_sim_output["frames"]
         )
         self.generate_ground_truth_output = generate_ground_truth(
-            particle_positions=self.dynamics_sim_output.particle_positions,
-            particle_states=self.dynamics_sim_output.particle_states,
-            n_spatial_values=self.sample_kymograph_output.n_spatial_values,
+            particle_positions=self.dynamics_sim_output["particle_positions"],
+            particle_states=self.dynamics_sim_output["particle_states"],
+            n_spatial_values=self.sample_kymograph_output["n_spatial_values"],
         )
 
     def save(self, out_dir: Path, save_visualization: bool = True):
@@ -90,7 +93,7 @@ class Pipeline:
         file_path = out_dir / f"simulation_animation_{output_id}.gif"
 
         z_index = self.params.rendering.imaging.output_space.shape[0] // 2
-        raw_frames = self.imaging_sim_output.frames[:, z_index]
+        raw_frames = self.imaging_sim_output["frames"][:, z_index]
         norm = plt.Normalize(vmin=raw_frames.min(), vmax=raw_frames.max())
         cmap = cm.get_cmap("gray")
         visual_frames: NDArray[np.float_] = cmap(norm(raw_frames))
@@ -108,7 +111,7 @@ class Pipeline:
 
     def _save_kymograph_png(self, out_dir: Path, output_id: str):
         file_path = out_dir / f"kymograph_{output_id}.png"
-        kymograph_raw = self.sample_kymograph_output.kymograph
+        kymograph_raw = self.sample_kymograph_output["kymograph"]
         kymograph_resized = _resize_image(kymograph_raw, factor=4)
         plt.imsave(
             file_path,
@@ -118,7 +121,7 @@ class Pipeline:
 
     def _save_kymograph_gt_png(self, out_dir: Path, output_id: str):
         file_path = out_dir / f"kymograph_gt_{output_id}.png"
-        kymograph_gt_raw = self.generate_ground_truth_output.ground_truth
+        kymograph_gt_raw = self.generate_ground_truth_output["ground_truth"]
         kymograph_gt_resized = _resize_image(kymograph_gt_raw, factor=4)
         plt.imsave(
             file_path,
@@ -130,9 +133,9 @@ class Pipeline:
         n_digits = 4
         single_digit_glob_pattern = "[0-9]"
         existing = glob(
-            str(out_dir / f"params_{single_digit_glob_pattern*n_digits}.png")
+            str(out_dir / f"params_{single_digit_glob_pattern*n_digits}.yaml")
         )
-        existing_ids = [int(filename[-8:-4]) for filename in existing]
+        existing_ids = [int(filename[-9:-5]) for filename in existing]
         if len(existing_ids) == 0:
             new_id = 0
         else:
