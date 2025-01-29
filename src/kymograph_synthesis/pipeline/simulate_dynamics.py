@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from typing import TypedDict
 
 import numpy as np
 from numpy.typing import NDArray
@@ -6,12 +6,12 @@ from ..params import DynamicsParams
 from ..dynamics import create_particle_simulators, run_dynamics_simulation
 
 
-@dataclass
-class DynamicsSimOutput:
+class DynamicsSimOutput(TypedDict):
     n_steps: int
     particle_positions: NDArray[np.float_]
     particle_fluorophore_count: NDArray[np.float_]
     particle_states: NDArray[np.int_]
+
 
 def simulate_dynamics(
     params: DynamicsParams,
@@ -25,7 +25,7 @@ def simulate_dynamics(
     )
     return DynamicsSimOutput(
         n_steps=params.n_steps,
-        particle_positions=particle_positions, 
-        particle_fluorophore_count=particle_fluorophore_count, 
-        particle_states=particle_states
+        particle_positions=particle_positions,
+        particle_fluorophore_count=particle_fluorophore_count,
+        particle_states=particle_states,
     )

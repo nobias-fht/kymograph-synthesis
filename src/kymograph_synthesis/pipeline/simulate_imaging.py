@@ -1,5 +1,4 @@
-from typing import Generator
-from dataclasses import dataclass
+from typing import TypedDict
 
 import numpy as np
 from numpy.typing import NDArray
@@ -14,8 +13,7 @@ from ..render.fluorophore_distributions import SimplexNoise, ParticleSystem
 from ..render.static_path import PiecewiseQuadraticBezierPath
 
 
-@dataclass
-class ImagingSimOutput:
+class ImagingSimOutput(TypedDict):
     frames: NDArray[np.uint16]
     path_length_um: float
 
@@ -45,9 +43,7 @@ def simulate_imaging(
         settings = params.imaging.settings
         settings.random_seed = seed + t
         sim = ms.Simulation(
-            **params.imaging.model_dump(
-                exclude=["settings"]
-            ),
+            **params.imaging.model_dump(exclude=["settings"]),
             settings=settings,
             sample=ms.Sample(labels=static_distributions + [particle_system]),
         )

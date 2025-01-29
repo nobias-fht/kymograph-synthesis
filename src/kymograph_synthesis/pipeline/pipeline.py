@@ -1,6 +1,5 @@
 from pathlib import Path
 import yaml
-from dataclasses import asdict
 from PIL import Image
 from glob import glob
 
@@ -28,7 +27,7 @@ class Pipeline:
     def run(self):
         self.dynamics_sim_output = simulate_dynamics(self.params.dynamics)
         # (alias to avoid too long line)
-        particle_fluorophore_count=self.dynamics_sim_output.particle_fluorophore_count
+        particle_fluorophore_count = self.dynamics_sim_output.particle_fluorophore_count
         self.imaging_sim_output = simulate_imaging(
             self.params.rendering,
             n_steps=self.dynamics_sim_output.n_steps,
@@ -67,19 +66,19 @@ class Pipeline:
             )
         np.savez(
             out_dir / f"dynamics_sim_output_{output_id}",
-            **asdict(self.dynamics_sim_output),
+            **self.dynamics_sim_output,
         )
         np.savez(
             out_dir / f"imaging_sim_output_{output_id}",
-            **asdict(self.imaging_sim_output),
+            **self.imaging_sim_output,
         )
         np.savez(
             out_dir / f"sample_kymograph_output_{output_id}",
-            **asdict(self.sample_kymograph_output),
+            **self.sample_kymograph_output,
         )
         np.savez(
             out_dir / f"generate_ground_truth_output_{output_id}",
-            **asdict(self.generate_ground_truth_output),
+            **self.generate_ground_truth_output,
         )
 
     def _save_visualization(self, out_dir: Path, output_id: str):

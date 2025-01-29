@@ -1,5 +1,4 @@
-from typing import Optional
-from dataclasses import dataclass
+from typing import Optional, TypedDict
 
 import numpy as np
 from numpy.typing import NDArray
@@ -8,20 +7,19 @@ from scipy.interpolate import interp1d
 from ..params import KymographParams
 from ..render.static_path import PiecewiseQuadraticBezierPath
 
-@dataclass
-class SampleKymographOutput:
+
+class SampleKymographOutput(TypedDict):
     kymograph: NDArray
     path_length_pixels: float
     n_spatial_values: int
+
 
 # TODO: output ndarray type, see if interp changes it.
 def sample_kymograph(
     params: KymographParams,
     frames: NDArray[np.uint16],
 ) -> NDArray:
-    sample_path_points = [
-        np.array(point) for point in params.sample_path_points
-    ]
+    sample_path_points = [np.array(point) for point in params.sample_path_points]
     sample_path = PiecewiseQuadraticBezierPath(sample_path_points)
 
     n_time_samples = frames.shape[0]
@@ -53,8 +51,9 @@ def sample_kymograph(
     return SampleKymographOutput(
         kymograph=kymograph,
         path_length_pixels=path_length_pixels,
-        n_spatial_values=n_spatial_values
+        n_spatial_values=n_spatial_values,
     )
+
 
 def inter_pixel_interp(
     path_samples: NDArray,
