@@ -1,4 +1,7 @@
 from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).parents[1]))
+
 import glob
 
 import numpy as np
@@ -46,14 +49,14 @@ params = Params(
         "n_steps": 120,
         "particle_density": 8,
         "fluorophore_count_mode": 400,
-        "fluorophore_count_var": 100**2,
+        "fluorophore_count_var": 300**2,
         "retro_speed_mode": 1.6,
         "retro_speed_var": 0.0001,
         "antero_speed_mode": 2,
         "antero_speed_var": 0.0001,
-        "velocity_noise_var": 0.005,
+        "velocity_noise_var": 0.1**2,
         "particle_behaviour": "unidirectional",
-        "fluorophore_halflife_mode": 64,
+        "fluorophore_halflife_mode": 120,
         "fluorophore_halflife_var": 0.6,
     },
     rendering={
@@ -68,15 +71,17 @@ params = Params(
             }
         ],
         "imaging": {
-            "exposure_ms": 50,
+            "exposure_ms": 100,
             "truth_space": {"shape": truth_space_shape, "scale": truth_space_scale},
-            "detector": {"camera_type": "CCD", "read_noise": 6},
+            "detector": {"camera_type": "CCD", "read_noise": 6, "gain": 60, "offset": 600},
             "settings": {"random_seed": 42},
-            "objective_lens": {"numerical_aperture": 0.5}
+            # "objective_lens": {"numerical_aperture": 0.5}
         },
     },
 )
 
 pipeline = Pipeline(params)
 pipeline.run()
+frames = pipeline.imaging_sim_output["frames"]
+print(f"Dynamic range: {frames.min()}, {frames.max()}")
 pipeline.save(root_dir)
