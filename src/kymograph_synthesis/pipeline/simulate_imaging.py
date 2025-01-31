@@ -40,7 +40,8 @@ def simulate_imaging(
             particle_positions=particle_positions,
             particle_fluorophore_count=particle_fluorophore_count,
         )
-        settings = params.imaging.settings
+        # copy so that saved seed won't be the seed + t
+        settings = params.imaging.settings.model_copy()
         settings.random_seed = seed + t
         sim = ms.Simulation(
             **params.imaging.model_dump(exclude=["settings"]),
