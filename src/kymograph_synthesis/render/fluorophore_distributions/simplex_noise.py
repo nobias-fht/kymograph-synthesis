@@ -12,8 +12,8 @@ class SimplexNoise:
 
     def __init__(
         self,
-        noise_scales: list[float],
-        scale_weights: list[float],
+        noise_scales: tuple[float, ...],
+        scale_weights: tuple[float, ...],
         max_fluorophore_count_per_nm3: float,
         seed: int,
     ):
@@ -28,24 +28,44 @@ class SimplexNoise:
         space += self.noise_array(dims=space.shape, scale=truth_space.scale)
         return space
 
-    @lru_cache
+
+
     def noise_array(
         self, dims: tuple[int, int, int], scale: tuple[float, float, float]
     ) -> NDArray:
-        opensimplex.seed(self._seed)
-        noise_array = np.zeros(dims)
-        for noise_scale, weight in zip(self._noise_scales, self._scale_weights):
-            noise_grid = [
-                np.linspace(0, noise_scale * s * dim, dim)
-                for s, dim in zip(scale, dims)
-            ]
-            noise_array += weight * opensimplex.noise3array(*reversed(noise_grid))
-
-        noise_array = (
-            (noise_array / noise_array.max())
-            * (self._max_fluorophore_count_per_nm3 * 1e6) # per um3
-            * np.prod(scale)
+        return _noise_array(
+            dims=dims, 
+            scale=scale, 
+            seed=self._seed, 
+            noise_scales=self._noise_scales,
+            scale_weights=self._scale_weights, 
+            max_fluorophore_count_per_nm3=self._max_fluorophore_count_per_nm3
         )
-        # clip < 0
-        noise_array[noise_array < 0] = 0
-        return noise_array
+
+
+@lru_cache(maxsize=1)
+def _noise_array(
+    dims: tuple[int, int, int], 
+    scale: tuple[float, float, float], 
+    seed: int, 
+    noise_scales: tuple[float, ...], 
+    scale_weights: tuple[float, ...], 
+    max_fluorophore_count_per_nm3: float
+) -> NDArray:
+    opensimplex.seed(seed)
+    noise_array = np.zeros(dims)
+    for noise_scale, weight in zip(noise_scales, scale_weights):
+        noise_grid = [
+            np.linspace(0, noise_scale * s * dim, dim)
+            for s, dim in zip(scale, dims)
+        ]
+        noise_array += weight * opensimplex.noise3array(*reversed(noise_grid))
+
+    noise_array = (
+        (noise_array / noise_array.max())
+        * (max_fluorophore_count_per_nm3 * 1e6) # per um3
+        * np.prod(scale)
+    )
+    # clip < 0
+    noise_array[noise_array < 0] = 0
+    return noise_array

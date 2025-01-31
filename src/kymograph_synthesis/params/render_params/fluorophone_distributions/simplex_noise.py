@@ -13,9 +13,9 @@ class SimplexNoiseParams(BaseModel):
 
     name: Literal[FluoroDistrName.SIMPLEX_NOISE] = FluoroDistrName.SIMPLEX_NOISE
 
-    noise_scales: list[float] = [1, 0.25]
-    scale_weights: list[float] = Field(
-        default_factory=lambda data: [1 for _ in range(len(data["noise_scales"]))],
+    noise_scales: tuple[float, ...] = Field(default=(1, 0.25))
+    scale_weights: tuple[float, ...] = Field(
+        default_factory=lambda data: tuple(1 for _ in range(len(data["noise_scales"]))),
         validate_default=True,
     )
     max_fluorophore_count_per_nm3: float
