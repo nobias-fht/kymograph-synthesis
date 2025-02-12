@@ -43,10 +43,14 @@ class ParticleSystem:
         )
         indices = indices[~out_of_bounds]
 
-        # TODO look up neatest way of vectorizing xarrays - this works tho
-        ind_along_z = xr.DataArray(indices[:, 0], dims=["new_index"])
-        ind_along_y = xr.DataArray(indices[:, 1], dims=["new_index"])
-        ind_along_x = xr.DataArray(indices[:, 2], dims=["new_index"])
+        # have to use unbuffered add,
+        # for particles in the same place the values will be accumulated
+        space_numpy = np.zeros(space.shape)
+        np.add.at(
+            space_numpy,
+            tuple(indices[:, i] for i in range(3)),
+            self.intensities[~out_of_bounds],
+        )
 
-        space[ind_along_z, ind_along_y, ind_along_x] += self.intensities[~out_of_bounds]
+        space += space_numpy
         return space
