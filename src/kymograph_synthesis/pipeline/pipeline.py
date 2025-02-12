@@ -18,7 +18,8 @@ from .generate_ground_truth import generate_ground_truth, GenerateGroundTruthOut
 
 class Pipeline:
 
-    def __init__(self, params: Params):
+    def __init__(self, params: Params, output_id:Optional[str]=None):
+        self.output_id = output_id
         self.params = params
         self.dynamics_sim_output: Optional[DynamicsSimOutput] = None
         self.imaging_sim_output: Optional[ImagingSimOutput] = None
@@ -47,7 +48,10 @@ class Pipeline:
         )
 
     def save(self, out_dir: Path, save_visualization: bool = True):
-        output_id = self._create_id(out_dir=out_dir)
+        if self.output_id is None:
+            output_id = self._create_id(out_dir=out_dir)
+        else:
+            output_id = self.output_id
         self._save_params(out_dir=out_dir, output_id=output_id)
         self._save_outputs(out_dir=out_dir, output_id=output_id)
         if save_visualization:
@@ -129,13 +133,13 @@ class Pipeline:
             cmap="gray",
         )
 
-    def _create_id(self, out_dir: Path):
+    def _create_id(self, out_dir: Path) -> str:
         n_digits = 4
         single_digit_glob_pattern = "[0-9]"
         existing = glob(
             str(out_dir / f"params_{single_digit_glob_pattern*n_digits}.yaml")
         )
-        existing_ids = [int(filename[-9:-5]) for filename in existing]
+        existing_ids = [int(filename[-5-n_digits:-5]) for filename in existing]
         if len(existing_ids) == 0:
             new_id = 0
         else:
