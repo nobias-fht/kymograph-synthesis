@@ -71,11 +71,13 @@ class Pipeline:
         self._save_outputs()
         if save_visualization:
             self._save_visualization()
+        self.write_log_manager.add_output_id(self.output_id)
+        self.write_log_manager.log()
 
     def _save_params(self):
         fname = (
             self.write_log_manager.write_log.pipeline_filenames.params + ".yaml"
-        ).format(self.output_id)
+        ).format(output_id=self.output_id)
         with open(self.out_dir / fname, "w") as f:
             yaml.dump(self.params.model_dump(mode="json"), f, sort_keys=False)
 
@@ -91,17 +93,17 @@ class Pipeline:
             )
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         dynamics_sim_output_fname = (pipeline_filenames.dynamics_sim_output).format(
-            self.output_id
+            output_id=self.output_id
         )
         imaging_sim_output_fname = (pipeline_filenames.imaging_sim_output).format(
-            self.output_id
+            output_id=self.output_id
         )
         sample_kymograph_output_fname = (
             pipeline_filenames.sample_kymograph_output
-        ).format(self.output_id)
+        ).format(output_id=self.output_id)
         generate_ground_truth_output_fname = (
             pipeline_filenames.generate_ground_truth_output
-        ).format(self.output_id)
+        ).format(output_id=self.output_id)
         np.savez(
             self.out_dir / dynamics_sim_output_fname,
             **self.dynamics_sim_output,
@@ -127,7 +129,7 @@ class Pipeline:
     def _save_animation_gif(self):
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         animation_2d_visual_fname = (pipeline_filenames.animation_2d_visual).format(
-            self.output_id
+            output_id=self.output_id
         ) + ".gif"
         file_path = self.out_dir / animation_2d_visual_fname
 
@@ -154,7 +156,7 @@ class Pipeline:
     def _save_kymograph_png(self):
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         kymograph_visual_fname = (pipeline_filenames.kymograph_visual).format(
-            self.output_id
+            output_id=self.output_id
         ) + ".png"
         file_path = self.out_dir / kymograph_visual_fname
 
@@ -169,7 +171,7 @@ class Pipeline:
     def _save_kymograph_gt_png(self):
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         kymograph_gt_visual_fname = (pipeline_filenames.kymograph_gt_visual).format(
-            self.output_id
+            output_id=self.output_id
         ) + ".png"
         file_path = self.out_dir / kymograph_gt_visual_fname
         kymograph_gt_raw = self.generate_ground_truth_output["ground_truth"]
