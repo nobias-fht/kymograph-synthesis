@@ -2,8 +2,8 @@ from typing import TypedDict
 
 import numpy as np
 from numpy.typing import NDArray
-from ..params import DynamicsParams
-from ..dynamics import create_particle_simulators, run_dynamics_simulation
+from ...params import DynamicsParams
+from ...dynamics import create_particle_simulators, run_dynamics_simulation
 
 
 class DynamicsSimOutput(TypedDict):

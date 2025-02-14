@@ -4,8 +4,8 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.interpolate import interp1d
 
-from ..params import KymographParams
-from ..render.static_path import PiecewiseQuadraticBezierPath
+from ...params import KymographParams
+from ...render.static_path import PiecewiseQuadraticBezierPath
 
 
 class SampleKymographOutput(TypedDict):

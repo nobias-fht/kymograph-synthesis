@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 
 from ..params import Params
-from .simulate_dynamics import simulate_dynamics, DynamicsSimOutput
-from .simulate_imaging import simulate_imaging, ImagingSimOutput
-from .sample_kymograph import sample_kymograph, SampleKymographOutput
-from .generate_ground_truth import generate_ground_truth, GenerateGroundTruthOutput
+from .steps.simulate_dynamics import simulate_dynamics, DynamicsSimOutput
+from .steps.simulate_imaging import simulate_imaging, ImagingSimOutput
+from .steps.sample_kymograph import sample_kymograph, SampleKymographOutput
+from .steps.generate_ground_truth import generate_ground_truth, GenerateGroundTruthOutput
 
 
 class Pipeline:

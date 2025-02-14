@@ -4,13 +4,13 @@ import numpy as np
 from numpy.typing import NDArray
 import microsim.schema as ms
 
-from ..params.render_params import (
+from ...params.render_params import (
     RenderingParams,
     FluoroDistrName,
     FluoroDistrParams,
 )
-from ..render.fluorophore_distributions import SimplexNoise, ParticleSystem
-from ..render.static_path import PiecewiseQuadraticBezierPath
+from ...render.fluorophore_distributions import SimplexNoise, ParticleSystem
+from ...render.static_path import PiecewiseQuadraticBezierPath
 
 
 class ImagingSimOutput(TypedDict):
