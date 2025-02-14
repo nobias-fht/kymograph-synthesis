@@ -111,6 +111,7 @@ class Pipeline:
             append_images=images[1:],
             optimize=False,
             duration=0.2,
+            loop=0,
         )
 
     def _save_kymograph_png(self, out_dir: Path, output_id: str):
