@@ -13,12 +13,16 @@ from ..params import Params
 from .steps.simulate_dynamics import simulate_dynamics, DynamicsSimOutput
 from .steps.simulate_imaging import simulate_imaging, ImagingSimOutput
 from .steps.sample_kymograph import sample_kymograph, SampleKymographOutput
-from .steps.generate_ground_truth import generate_ground_truth, GenerateGroundTruthOutput
+from .steps.generate_ground_truth import (
+    generate_ground_truth,
+    GenerateGroundTruthOutput,
+)
+from .write_log import WriteLogManager, PipelineFilenames
 
 
 class Pipeline:
 
-    def __init__(self, params: Params, output_id:Optional[str]=None):
+    def __init__(self, params: Params, output_id: Optional[str] = None):
         self.output_id = output_id
         self.params = params
         self.dynamics_sim_output: Optional[DynamicsSimOutput] = None
@@ -47,9 +51,18 @@ class Pipeline:
             n_spatial_values=self.sample_kymograph_output["n_spatial_values"],
         )
 
-    def save(self, out_dir: Path, save_visualization: bool = True):
+    def save(
+        self,
+        out_dir: Path,
+        output_filenames: Optional[PipelineFilenames] = None,
+        save_visualization: bool = True,
+    ):
+        write_log_manager = WriteLogManager(
+            out_dir=out_dir, pipeline_filenames=output_filenames
+        )
+
         if self.output_id is None:
-            output_id = self._create_id(out_dir=out_dir)
+            output_id = write_log_manager.create_new_id()
         else:
             output_id = self.output_id
         self._save_params(out_dir=out_dir, output_id=output_id)
@@ -102,7 +115,9 @@ class Pipeline:
         cmap = cm.get_cmap("gray")
         visual_frames: NDArray[np.float_] = cmap(norm(raw_frames))
         images = [
-            Image.fromarray((_resize_image(frame, factor=4) * 255).astype(np.uint8), mode="RGBA")
+            Image.fromarray(
+                (_resize_image(frame, factor=4) * 255).astype(np.uint8), mode="RGBA"
+            )
             for frame in visual_frames
         ]
         images[0].save(
@@ -133,19 +148,6 @@ class Pipeline:
             np.squeeze(kymograph_gt_resized),
             cmap="gray",
         )
-
-    def _create_id(self, out_dir: Path) -> str:
-        n_digits = 4
-        single_digit_glob_pattern = "[0-9]"
-        existing = glob(
-            str(out_dir / f"params_{single_digit_glob_pattern*n_digits}.yaml")
-        )
-        existing_ids = [int(filename[-5-n_digits:-5]) for filename in existing]
-        if len(existing_ids) == 0:
-            new_id = 0
-        else:
-            new_id = max(existing_ids) + 1
-        return "{1:0{0}d}".format(n_digits, new_id)
 
 
 def _resize_image(image: NDArray, factor: int) -> NDArray:

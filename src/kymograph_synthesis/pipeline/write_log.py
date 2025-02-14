@@ -70,7 +70,7 @@ class WriteLog(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, validate_default=True)
 
-    pipeline_filenames:PipelineFilenames = Field(default=PipelineFilenames())
+    pipeline_filenames: PipelineFilenames = Field(default=PipelineFilenames())
     # alpha numeric 1 or more characters
     output_ids: set[AlphaNumericStr] = Field(default=set())
 
@@ -117,6 +117,17 @@ class WriteLogManager:
     def save_back_up(self):
         if self.path.is_file():
             shutil.copy2(self.path, self.backup_path)
+
+    def create_new_id(self, n_digits: int=4) -> str:
+        # TODO: allow different ID creation strategies - probs overkill
+        existing_ids = [
+            int(file_id) for file_id in self.write_log.output_ids if file_id.isnumeric()
+        ]
+        if len(existing_ids) == 0:
+            new_id = 0
+        else:
+            new_id = max(existing_ids) + 1
+        return "{1:0{0}d}".format(n_digits, new_id)
 
     def _writelog_file_exists(self) -> tuple[bool, Optional[Path]]:
 
