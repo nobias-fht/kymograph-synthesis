@@ -79,10 +79,10 @@ class WriteLog(BaseModel):
         self.output_ids.add(TypeAdapter(AlphaNumericStr).validate_python(output_id))
 
 
-class WriteLogManager:
+class WriteManager:
 
     def __init__(
-        self, out_dir: Path, pipeline_filename: Optional[PipelineFilenames] = None
+        self, out_dir: Path, pipeline_filenames: Optional[PipelineFilenames] = None
     ):
         self.fname = "write_log"
         self.path: Path = (out_dir / self.fname).with_suffix(".json")
@@ -92,7 +92,7 @@ class WriteLogManager:
         load_existing, load_path = self._writelog_file_exists()
 
         if load_existing:
-            if pipeline_filename is not None:
+            if pipeline_filenames is not None:
                 logger.warning(
                     "Loading exisiting pipeline write log but pipeline filenames have "
                     "been provided. Only existing filenames in the write log will be "
@@ -102,8 +102,8 @@ class WriteLogManager:
         else:
             self.write_log = (
                 WriteLog()
-                if pipeline_filename is None
-                else WriteLog(pipeline_filename=pipeline_filename)
+                if pipeline_filenames is None
+                else WriteLog(pipeline_filename=pipeline_filenames)
             )
 
     def add_output_id(self, output_id: str):
