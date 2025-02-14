@@ -22,9 +22,24 @@ from .write_log import WriteLogManager, PipelineFilenames
 
 class Pipeline:
 
-    def __init__(self, params: Params, output_id: Optional[str] = None):
-        self.output_id = output_id
+    def __init__(
+        self,
+        params: Params,
+        out_dir: Path,
+        output_id: Optional[str] = None,
+        output_filenames: Optional[PipelineFilenames] = None,
+    ):
         self.params = params
+        self.out_dir = out_dir
+        self.write_log_manager = WriteLogManager(
+            out_dir=out_dir, pipeline_filenames=output_filenames
+        )
+        if output_id is None:
+            self.output_id = self.write_log_manager.create_new_id()
+        else:
+            self.output_id = self.output_id
+
+        # These will be created when the pipeline is run
         self.dynamics_sim_output: Optional[DynamicsSimOutput] = None
         self.imaging_sim_output: Optional[ImagingSimOutput] = None
         self.sample_kymograph_output: Optional[SampleKymographOutput] = None
@@ -51,30 +66,20 @@ class Pipeline:
             n_spatial_values=self.sample_kymograph_output["n_spatial_values"],
         )
 
-    def save(
-        self,
-        out_dir: Path,
-        output_filenames: Optional[PipelineFilenames] = None,
-        save_visualization: bool = True,
-    ):
-        write_log_manager = WriteLogManager(
-            out_dir=out_dir, pipeline_filenames=output_filenames
-        )
-
-        if self.output_id is None:
-            output_id = write_log_manager.create_new_id()
-        else:
-            output_id = self.output_id
-        self._save_params(out_dir=out_dir, output_id=output_id)
-        self._save_outputs(out_dir=out_dir, output_id=output_id)
+    def save(self, save_visualization: bool = True):
+        self._save_params()
+        self._save_outputs()
         if save_visualization:
-            self._save_visualization(out_dir=out_dir, output_id=output_id)
+            self._save_visualization()
 
-    def _save_params(self, out_dir: Path, output_id: str):
-        with open(out_dir / f"params_{output_id}.yaml", "w") as f:
+    def _save_params(self):
+        fname = (
+            self.write_log_manager.write_log.pipeline_filenames.params + ".yaml"
+        ).format(self.output_id)
+        with open(self.out_dir / fname, "w") as f:
             yaml.dump(self.params.model_dump(mode="json"), f, sort_keys=False)
 
-    def _save_outputs(self, out_dir: Path, output_id: str):
+    def _save_outputs(self):
         if (
             (self.dynamics_sim_output is None)
             or (self.imaging_sim_output is None)
@@ -84,30 +89,47 @@ class Pipeline:
             raise ValueError(
                 "Outputs are None. Pipeline needs to be run before it can be saved."
             )
+        pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
+        dynamics_sim_output_fname = (pipeline_filenames.dynamics_sim_output).format(
+            self.output_id
+        )
+        imaging_sim_output_fname = (pipeline_filenames.imaging_sim_output).format(
+            self.output_id
+        )
+        sample_kymograph_output_fname = (
+            pipeline_filenames.sample_kymograph_output
+        ).format(self.output_id)
+        generate_ground_truth_output_fname = (
+            pipeline_filenames.generate_ground_truth_output
+        ).format(self.output_id)
         np.savez(
-            out_dir / f"dynamics_sim_output_{output_id}",
+            self.out_dir / dynamics_sim_output_fname,
             **self.dynamics_sim_output,
         )
         np.savez(
-            out_dir / f"imaging_sim_output_{output_id}",
+            self.out_dir / imaging_sim_output_fname,
             **self.imaging_sim_output,
         )
         np.savez(
-            out_dir / f"sample_kymograph_output_{output_id}",
+            self.out_dir / sample_kymograph_output_fname,
             **self.sample_kymograph_output,
         )
         np.savez(
-            out_dir / f"generate_ground_truth_output_{output_id}",
+            self.out_dir / generate_ground_truth_output_fname,
             **self.generate_ground_truth_output,
         )
 
-    def _save_visualization(self, out_dir: Path, output_id: str):
-        self._save_kymograph_png(out_dir=out_dir, output_id=output_id)
-        self._save_kymograph_gt_png(out_dir=out_dir, output_id=output_id)
-        self._save_animation_gif(out_dir=out_dir, output_id=output_id)
+    def _save_visualization(self):
+        self._save_kymograph_png()
+        self._save_kymograph_gt_png()
+        self._save_animation_gif()
 
-    def _save_animation_gif(self, out_dir: Path, output_id: str):
-        file_path = out_dir / f"simulation_animation_{output_id}.gif"
+    def _save_animation_gif(self):
+        pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
+        animation_2d_visual_fname = (pipeline_filenames.animation_2d_visual).format(
+            self.output_id
+        ) + ".gif"
+        file_path = self.out_dir / animation_2d_visual_fname
 
         z_index = self.params.rendering.imaging.output_space.shape[0] // 2
         raw_frames = self.imaging_sim_output["frames"][:, z_index]
@@ -129,8 +151,13 @@ class Pipeline:
             loop=0,
         )
 
-    def _save_kymograph_png(self, out_dir: Path, output_id: str):
-        file_path = out_dir / f"kymograph_{output_id}.png"
+    def _save_kymograph_png(self):
+        pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
+        kymograph_visual_fname = (pipeline_filenames.kymograph_visual).format(
+            self.output_id
+        ) + ".png"
+        file_path = self.out_dir / kymograph_visual_fname
+
         kymograph_raw = self.sample_kymograph_output["kymograph"]
         kymograph_resized = _resize_image(kymograph_raw, factor=4)
         plt.imsave(
@@ -139,8 +166,12 @@ class Pipeline:
             cmap="gray",
         )
 
-    def _save_kymograph_gt_png(self, out_dir: Path, output_id: str):
-        file_path = out_dir / f"kymograph_gt_{output_id}.png"
+    def _save_kymograph_gt_png(self):
+        pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
+        kymograph_gt_visual_fname = (pipeline_filenames.kymograph_gt_visual).format(
+            self.output_id
+        ) + ".png"
+        file_path = self.out_dir / kymograph_gt_visual_fname
         kymograph_gt_raw = self.generate_ground_truth_output["ground_truth"]
         kymograph_gt_resized = _resize_image(kymograph_gt_raw, factor=4)
         plt.imsave(

@@ -54,9 +54,9 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
             params.dynamics.seed = seed
             params.rendering.static_distributions[0].seed = seed
             params.rendering.imaging.settings.random_seed = seed
-        pipeline = Pipeline(params)
+        pipeline = Pipeline(params, out_dir=output_dir)
         pipeline.run()
-        pipeline.save(output_dir)
+        pipeline.save()
 
 
 if __name__ == "__main__":
@@ -65,10 +65,18 @@ if __name__ == "__main__":
         "--dir", "-d", type=Path, required=True, help="Directory to save outputs to."
     )
     parser.add_argument(
-        "-n", dest="n_kymographs", type=int, required=True, help="The number of kymographs to create."
+        "-n",
+        dest="n_kymographs",
+        type=int,
+        required=True,
+        help="The number of kymographs to create.",
     )
     parser.add_argument(
-        "--seed", type=int, required=False, default=None, help="A seed for reproducibility"
+        "--seed",
+        type=int,
+        required=False,
+        default=None,
+        help="A seed for reproducibility",
     )
     args = parser.parse_args()
 
