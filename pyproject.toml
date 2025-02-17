@@ -18,6 +18,9 @@ sources = ["src"]
 [project]
 name = "kymograph_synthesis"
 dynamic = ["version"]
+authors = [
+  {name = "Melisande Croft", email = "melisande.croft@fht.org"}
+]
 
 dependencies = [
     "numpy",
