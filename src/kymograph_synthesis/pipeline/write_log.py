@@ -16,51 +16,64 @@ from pydantic import (
 logger = logging.getLogger(__name__)
 
 # alphanumeric + dash and underscore, has to include "{output id}""
-FNAME_REGEX = "^(?:[a-zA-Z0-9_-]*\{output_id\}[a-zA-Z0-9_-]*)$"
+FILE_NAME_REGEX = "^(?:[a-zA-Z0-9_-]*\{output_id\}[a-zA-Z0-9_-]*)$"
+# alphanumeric . at the start and one other . allowed (for example .tar.gz)
+FILE_EXTENSION_REGEX = "^\.[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)?$"
 
 AlphaNumericStr = Annotated[str, StringConstraints(pattern="^[a-zA-Z0-9]+$")]
+
+
+class OutputFileName(BaseModel):
+
+    name: Annotated[str, StringConstraints(pattern=FILE_NAME_REGEX)]
+    extension: Annotated[str, StringConstraints(pattern=FILE_EXTENSION_REGEX)]
+
+    def file_name(self, output_id: str) -> str:
+        return self.name.format(output_id=output_id) + self.extension
 
 
 class PipelineFilenames(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, validate_default=True)
 
-    params: Annotated[str, StringConstraints(pattern=FNAME_REGEX)] = Field(
-        default="params_{output_id}"
+    params: OutputFileName = OutputFileName(
+        name="params_{output_id}",
+        extension=".yaml",
     )
 
-    dynamics_sim_output: Annotated[str, StringConstraints(pattern=FNAME_REGEX)] = Field(
-        default="dynamics_sim_output_{output_id}"
+    dynamics_sim_output: OutputFileName = OutputFileName(
+        name="dynamics_sim_output_{output_id}", extension=".npz"
     )
 
-    imaging_sim_output: Annotated[str, StringConstraints(pattern=FNAME_REGEX)] = Field(
-        default="imaging_sim_output_{output_id}"
+    imaging_sim_output: OutputFileName = OutputFileName(
+        name="imaging_sim_output_{output_id}", extension=".npz"
     )
 
-    sample_kymograph_output: Annotated[str, StringConstraints(pattern=FNAME_REGEX)] = (
-        Field(default="sample_kymograph_output_{output_id}")
+    sample_kymograph_output: OutputFileName = OutputFileName(
+        name="sample_kymograph_output_{output_id}", extension=".npz"
     )
 
-    generate_ground_truth_output: Annotated[
-        str, StringConstraints(pattern=FNAME_REGEX)
-    ] = Field(default="generate_ground_truth_output_{output_id}")
-
-    kymograph_visual: Annotated[str, StringConstraints(pattern=FNAME_REGEX)] = Field(
-        default="kymograph_{output_id}"
+    generate_ground_truth_output: OutputFileName = OutputFileName(
+        name="generate_ground_truth_output_{output_id}", extension=".npz"
     )
 
-    kymograph_gt_visual: Annotated[str, StringConstraints(pattern=FNAME_REGEX)] = Field(
-        default="kymograph_gt_{output_id}"
+    kymograph_visual: OutputFileName = OutputFileName(
+        name="kymograph_{output_id}", extension=".png"
     )
 
-    animation_2d_visual: Annotated[str, StringConstraints(pattern=FNAME_REGEX)] = Field(
-        default="simulation_animation_{output_id}"
+    kymograph_gt_visual: OutputFileName = OutputFileName(
+        name="kymograph_gt_{output_id}", extension=".png"
+    )
+
+    animation_2d_visual: OutputFileName = OutputFileName(
+        name="simulation_animation_{output_id}", extension=".gif"
     )
 
     @model_validator(mode="after")
     def validate_names_unique(self):
         fname_dict = self.model_dump()
-        fnames = list(fname_dict.values())
+        # TODO: can improve this
+        fnames = [file_name["name"] for file_name in fname_dict.values()]
         if len(fnames) != len(set(fnames)):
             raise ValueError(f"Pipeline write filenames not unique: {self}")
         return self
@@ -118,7 +131,7 @@ class WriteLogManager:
         if self.path.is_file():
             shutil.copy2(self.path, self.backup_path)
 
-    def create_new_id(self, n_digits: int=4) -> str:
+    def create_new_id(self, n_digits: int = 4) -> str:
         # TODO: allow different ID creation strategies - probs overkill
         existing_ids = [
             int(file_id) for file_id in self.write_log.output_ids if file_id.isnumeric()
