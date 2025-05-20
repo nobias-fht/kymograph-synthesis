@@ -1,7 +1,6 @@
 from pydantic import Field
 import microsim.schema as ms
 
-# TODO: move imaging params to own module
 # microsim params but exclude sample, ParticleSystem and RenderingParams are elsewhere
 class ImagingParams(ms.Simulation):
 

@@ -1,12 +1,13 @@
-from typing import Optional
+from typing import Optional, cast, Mapping
 from pathlib import Path
 import yaml
 from PIL import Image
 from glob import glob
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import NDArray, ArrayLike
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
 from matplotlib import cm
 
 from ..params import Params
@@ -107,21 +108,22 @@ class Pipeline:
         generate_ground_truth_output_fname = (
             pipeline_filenames.generate_ground_truth_output
         ).file_name(output_id=self.output_id)
+
         np.savez(
             self.out_dir / dynamics_sim_output_fname,
-            **self.dynamics_sim_output,
+            **cast(Mapping[str, ArrayLike], self.dynamics_sim_output),
         )
         np.savez(
             self.out_dir / imaging_sim_output_fname,
-            **self.imaging_sim_output,
+            **cast(Mapping[str, ArrayLike], self.imaging_sim_output),
         )
         np.savez(
             self.out_dir / sample_kymograph_output_fname,
-            **self.sample_kymograph_output,
+            **cast(Mapping[str, ArrayLike], self.sample_kymograph_output),
         )
         np.savez(
             self.out_dir / generate_ground_truth_output_fname,
-            **self.generate_ground_truth_output,
+            **cast(Mapping[str, ArrayLike], self.generate_ground_truth_output),
         )
 
     def _save_visualization(self):
@@ -130,6 +132,11 @@ class Pipeline:
         self._save_animation_gif()
 
     def _save_animation_gif(self):
+        if self.imaging_sim_output is None:
+            raise RuntimeError(
+                "Imaging sim output has to be generated before animation gif can be "
+                "saved."
+            )
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         animation_2d_visual_fname = pipeline_filenames.animation_2d_visual.file_name(
             output_id=self.output_id
@@ -138,7 +145,7 @@ class Pipeline:
 
         z_index = self.params.rendering.imaging.output_space.shape[0] // 2
         raw_frames = self.imaging_sim_output["frames"][:, z_index]
-        norm = plt.Normalize(vmin=raw_frames.min(), vmax=raw_frames.max())
+        norm = Normalize(vmin=raw_frames.min(), vmax=raw_frames.max())
         cmap = cm.get_cmap("gray")
         visual_frames: NDArray[np.float_] = cmap(norm(raw_frames))
         images = [
@@ -157,6 +164,12 @@ class Pipeline:
         )
 
     def _save_kymograph_png(self):
+        if self.sample_kymograph_output is None:
+            raise RuntimeError(
+                "Cannot save kymograph output before kymograph sampling step has "
+                "happend."
+            )
+
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         kymograph_visual_fname = pipeline_filenames.kymograph_visual.file_name(
             output_id=self.output_id
@@ -172,6 +185,11 @@ class Pipeline:
         )
 
     def _save_kymograph_gt_png(self):
+        if self.generate_ground_truth_output is None:
+            raise RuntimeError(
+                "Cannot save kymograph ground truth before the ground truth has been "
+                "generated."
+            )
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         kymograph_gt_visual_fname = pipeline_filenames.kymograph_gt_visual.file_name(
             output_id=self.output_id

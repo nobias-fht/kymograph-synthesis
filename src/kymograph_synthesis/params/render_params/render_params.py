@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Any
 
 from pydantic import (
@@ -98,7 +99,7 @@ def _convert_relative_to_um(
     relative_points: list[tuple[float, float, float]],
     truth_space_shape: tuple[int, int, int],
     truth_space_scale: tuple[float, float, float],
-) -> list[float, float, float]:
+) -> Sequence[tuple[float, float, float]]:
     um_points = [
         np.array(point) * np.array(truth_space_shape) * np.array(truth_space_scale)
         for point in relative_points

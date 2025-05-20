@@ -18,7 +18,7 @@ class SampleKymographOutput(TypedDict):
 def sample_kymograph(
     params: KymographParams,
     frames: NDArray[np.uint16],
-) -> NDArray:
+) -> SampleKymographOutput:
     sample_path_points = [np.array(point) for point in params.sample_path_points]
     sample_path = PiecewiseQuadraticBezierPath(sample_path_points)
 
