@@ -1,9 +1,12 @@
 from typing import Any
+from collections.abc import Sequence
 
 import numpy as np
 from pydantic import (
+    Field,
     ConfigDict,
     BaseModel,
+    PositiveInt,
     ValidationInfo,
     model_validator,
     field_validator,
@@ -14,17 +17,18 @@ from .dynamics_params import DynamicsParams
 from .kymograph_params import KymographParams
 
 
-
 class Params(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, validate_default=True)
 
-    dynamics: DynamicsParams = DynamicsParams()
+    n_steps: PositiveInt = Field(default_factory=lambda: np.random.randint(64, 128))
+    """The number of simulation steps in the dynamics simulation."""
 
-    rendering: RenderingParams = RenderingParams()
+    dynamics: DynamicsParams | Sequence[DynamicsParams]
+
+    rendering: RenderingParams
 
     kymograph: KymographParams
-
 
     @field_validator("kymograph", mode="before")
     @classmethod
@@ -49,15 +53,16 @@ class Params(BaseModel):
         )
         value.setdefault("sample_path_points", kymo_sample_path_points)
         return value
-    
+
     @model_validator(mode="before")
     @classmethod
     def set_empty_values(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return
-        
+
         data.setdefault("kymograph", {})
         return data
+
 
 # TODO: move to helper module
 def calc_kymo_sample_path(
@@ -74,5 +79,3 @@ def calc_kymo_sample_path(
     )
     kymo_sample_path_points[:, 0] = truth_space_z_idx / output_space_downscale
     return [tuple(point) for point in kymo_sample_path_points]
-
-
