@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from kymograph_synthesis.params import Params
+from kymograph_synthesis.params import Params, DynamicsParams
 from kymograph_synthesis.pipeline import Pipeline
 
 
@@ -15,9 +15,10 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
     rng = np.random.default_rng(seed=seed)
 
     for _ in range(n_kymographs):
-
+        n_steps = np.random.randint(64, 128)
         params = Params.model_validate(
             {
+                "n_steps": n_steps,
                 "dynamics": {
                     "particle_behaviour": "bidirectional",
                     "particle_density": rng.uniform(1, 8),
@@ -28,6 +29,12 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
                     "velocity_noise_var": rng.uniform(0.01**2, 0.05**2),
                     "fluorophore_count_mode": rng.uniform(200, 600),
                     "fluorophore_count_var": rng.uniform(100**2, 300**2),
+                    "fluorophore_halflife_mode": rng.uniform(
+                        n_steps * 0.5, n_steps * 1.5
+                    ),
+                    "fluorophore_halflife_var": rng.uniform(
+                        n_steps * 0.5 / 10, n_steps * 1.5 / 10
+                    ),
                     "transition_matrix": {
                         "anterograde": {
                             "anterograde": 0.7,
@@ -75,7 +82,11 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
             }
         )
         if seed is not None:
-            params.dynamics.seed = seed
+            if isinstance(params.dynamics, DynamicsParams):
+                params.dynamics.seed = seed
+            else:
+                for param_set in params.dynamics:
+                    param_set.seed = seed
             params.rendering.static_distributions[0].seed = seed
             params.rendering.imaging.settings.random_seed = seed
         pipeline = Pipeline(params, out_dir=output_dir)
