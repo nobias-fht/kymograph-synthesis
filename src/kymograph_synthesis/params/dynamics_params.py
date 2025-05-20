@@ -46,7 +46,7 @@ def antero_var_default_factory(normal_std: PositiveFloat):
     return inner
 
 
-def transition_matrix_default_factory(data: dict[str:Any]) -> TransitionMatrixType:
+def transition_matrix_default_factory(data: dict[str, Any]) -> TransitionMatrixType:
     values = np.random.rand(3, 3)
     # unidirectional particles do not transition
     if data["particle_behaviour"] == "unidirectional":
@@ -75,15 +75,14 @@ class DynamicsParams(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, validate_default=True)
 
-    n_steps: PositiveInt = Field(default_factory=lambda: np.random.randint(64, 128))
-    """The number of simulation steps in the dynamics simulation."""
-
     particle_density: PositiveFloat = Field(
         default_factory=lambda: np.random.uniform(1, 12)
     )
     """Average particle density. Units are number of particles per path."""
 
-    retro_speed_mode: PositiveFloat = Field(default_factory=lambda: np.random.uniform(0.5, 6))
+    retro_speed_mode: PositiveFloat = Field(
+        default_factory=lambda: np.random.uniform(0.5, 6)
+    )
     """
     Mode of particle speed in the retrograde direction, modeled by a log-normal 
     distribution. Units are percentage of path per simulation time step.
@@ -113,7 +112,9 @@ class DynamicsParams(BaseModel):
     distribution.
     """
 
-    velocity_noise_var: PositiveFloat = Field(default_factory=lambda: np.random.uniform(0, 0.4))
+    velocity_noise_var: PositiveFloat = Field(
+        default_factory=lambda: np.random.uniform(0, 0.4)
+    )
     """
     Variance of the velocity noise, modeled by a Gaussian distribution. Units are 
     percentage of path per simulation time step.
@@ -131,19 +132,10 @@ class DynamicsParams(BaseModel):
     )
     """Variance of the particle intensities, modeled by a log-normal distribution."""
 
-    fluorophore_halflife_mode: PositiveFloat = Field(
-        default_factory=lambda data: np.random.uniform(
-            data["n_steps"] * 0.5, data["n_steps"] * 1.5
-        )
-    )
+    fluorophore_halflife_mode: PositiveFloat
     """Mode of particle intensity half-life, modeled by a log-normal distribution."""
 
-    fluorophore_halflife_var: PositiveFloat = Field(
-        default_factory=lambda data: np.random.uniform(
-            data["n_steps"] * 0.5 / 10, data["n_steps"] * 1.5 / 10
-        )
-        ** 2
-    )
+    fluorophore_halflife_var: PositiveFloat
     """
     Variance of the paticle intensity half-life, modeled by a log-normal distribution.
     """

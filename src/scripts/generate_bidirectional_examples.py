@@ -10,6 +10,8 @@ from kymograph_synthesis.pipeline import Pipeline
 
 def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
 
+    if not output_dir.is_dir():
+        raise NotADirectoryError(f"'{output_dir}' is not a directory.")
     rng = np.random.default_rng(seed=seed)
 
     for _ in range(n_kymographs):
@@ -18,13 +20,13 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
             {
                 "n_steps": n_steps,
                 "dynamics": {
-                    "particle_behaviour": "unidirectional",
+                    "particle_behaviour": "bidirectional",
                     "particle_density": rng.uniform(1, 8),
                     "antero_speed_mode": rng.uniform(1, 3),
                     "antero_speed_var": rng.uniform(0.00005, 0.00015),
                     "retro_speed_mode": rng.uniform(1, 3),
                     "retro_speed_var": rng.uniform(0.00005, 0.00015),
-                    "velocity_noise_var": rng.uniform(0.01**2, 0.1**2),
+                    "velocity_noise_var": rng.uniform(0.01**2, 0.05**2),
                     "fluorophore_count_mode": rng.uniform(200, 600),
                     "fluorophore_count_var": rng.uniform(100**2, 300**2),
                     "fluorophore_halflife_mode": rng.uniform(
@@ -33,6 +35,23 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
                     "fluorophore_halflife_var": rng.uniform(
                         n_steps * 0.5 / 10, n_steps * 1.5 / 10
                     ),
+                    "transition_matrix": {
+                        "anterograde": {
+                            "anterograde": 0.7,
+                            "stationary": 0.3,
+                            "retrograde": 0,
+                        },
+                        "stationary": {
+                            "anterograde": 0.03,
+                            "stationary": 0.95,
+                            "retrograde": 0.02,
+                        },
+                        "retrograde": {
+                            "anterograde": 0,
+                            "stationary": 0.3,
+                            "retrograde": 0.7,
+                        },
+                    },
                 },
                 "rendering": {
                     "static_distributions": [

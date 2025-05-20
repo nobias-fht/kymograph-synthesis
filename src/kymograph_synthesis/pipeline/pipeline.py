@@ -47,7 +47,9 @@ class Pipeline:
         self.generate_ground_truth_output: Optional[GenerateGroundTruthOutput] = None
 
     def run(self):
-        self.dynamics_sim_output = simulate_dynamics(self.params.dynamics)
+        self.dynamics_sim_output = simulate_dynamics(
+            self.params.dynamics, self.params.n_steps
+        )
         # (alias to avoid too long line)
         particle_fluorophore_count = self.dynamics_sim_output[
             "particle_fluorophore_count"
