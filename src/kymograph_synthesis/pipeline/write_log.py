@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, overload, Literal
 from pathlib import Path
 import json
 import shutil
@@ -41,19 +41,19 @@ class PipelineFilenames(BaseModel):
         extension=".yaml",
     )
 
-    dynamics_sim_output: OutputFileName = OutputFileName(
+    dynamics_sim: OutputFileName = OutputFileName(
         name="dynamics_sim_output_{output_id}", extension=".npz"
     )
 
-    imaging_sim_output: OutputFileName = OutputFileName(
+    imaging_sim: OutputFileName = OutputFileName(
         name="imaging_sim_output_{output_id}", extension=".npz"
     )
 
-    sample_kymograph_output: OutputFileName = OutputFileName(
+    sample_kymograph: OutputFileName = OutputFileName(
         name="sample_kymograph_output_{output_id}", extension=".npz"
     )
 
-    generate_ground_truth_output: OutputFileName = OutputFileName(
+    generate_ground_truth: OutputFileName = OutputFileName(
         name="generate_ground_truth_output_{output_id}", extension=".npz"
     )
 
@@ -102,9 +102,9 @@ class WriteLogManager:
         self.backup_path = (out_dir / self.fname).with_suffix(".json.backup")
         self.write_log: WriteLog
 
-        load_existing, load_path = self._writelog_file_exists()
+        load_path = self._get_writelog_path()
 
-        if load_existing:
+        if load_path is not None:
             if pipeline_filenames is not None:
                 logger.warning(
                     "Loading exisiting pipeline write log but pipeline filenames have "
@@ -116,7 +116,7 @@ class WriteLogManager:
             self.write_log = (
                 WriteLog()
                 if pipeline_filenames is None
-                else WriteLog(pipeline_filename=pipeline_filenames)
+                else WriteLog(pipeline_filenames=pipeline_filenames)
             )
 
     def add_output_id(self, output_id: str):
@@ -142,15 +142,15 @@ class WriteLogManager:
             new_id = max(existing_ids) + 1
         return "{1:0{0}d}".format(n_digits, new_id)
 
-    def _writelog_file_exists(self) -> tuple[bool, Optional[Path]]:
+    def _get_writelog_path(self) -> Optional[Path]:
 
         if self.path.is_file():
-            return True, self.path
+            return self.path
 
         if self.backup_path.is_file():
-            return True, self.backup_path
+            return self.backup_path
 
-        return False, None
+        return None
 
 
 def _load_existing_write_log(path: Path) -> WriteLog:

@@ -1,3 +1,4 @@
+from enum import Enum, auto
 from typing import Optional, cast, Mapping
 from pathlib import Path
 import yaml
@@ -21,35 +22,82 @@ from .steps.generate_ground_truth import (
 from .write_log import WriteLogManager, PipelineFilenames
 
 
+class PipelineSteps(Enum):
+
+    DYNAMICS_SIM = auto()
+    IMAGING_SIM = auto()
+    SAMPLE_KYMOGRAPH = auto()
+    GENERATE_GROUND_TRUTH = auto()
+
+
 class Pipeline:
 
     def __init__(
         self,
-        params: Params,
+        params: Optional[Params],
         out_dir: Path,
         output_id: Optional[str] = None,
         output_filenames: Optional[PipelineFilenames] = None,
     ):
-        self.params = params
+        self.params: Params
+        self.dynamics_sim_output: Optional[DynamicsSimOutput]
+        self.imaging_sim_output: Optional[ImagingSimOutput]
+        self.sample_kymograph_output: Optional[SampleKymographOutput]
+        self.generate_ground_truth_output: Optional[GenerateGroundTruthOutput]
+
         self.out_dir = out_dir
         self.write_log_manager = WriteLogManager(
             out_dir=out_dir, pipeline_filenames=output_filenames
         )
-        if output_id is None:
-            self.output_id = self.write_log_manager.create_new_id()
+
+        if params is None:
+            if output_id is None:
+                raise ValueError(
+                    "Either `params` or existing `output_id` to be loaded must be "
+                    "provided, found both as `None`."
+                )
+            else:
+                self.load(output_id)  # loads params and existing outputs
         else:
-            self.output_id = self.output_id
+            self.params = params
+            if output_id is None:
+                self.output_id = self.write_log_manager.create_new_id()
+            else:
+                self.output_id = self.output_id
 
-        # These will be created when the pipeline is run
-        self.dynamics_sim_output: Optional[DynamicsSimOutput] = None
-        self.imaging_sim_output: Optional[ImagingSimOutput] = None
-        self.sample_kymograph_output: Optional[SampleKymographOutput] = None
-        self.generate_ground_truth_output: Optional[GenerateGroundTruthOutput] = None
+            # These will be created when the pipeline is run
+            self.dynamics_sim_output = None
+            self.imaging_sim_output = None
+            self.sample_kymograph_output = None
+            self.generate_ground_truth_output = None
 
-    def run(self):
+    def run(self, steps: Optional[list[PipelineSteps]] = None):
+
+        if (steps is None) or (PipelineSteps.DYNAMICS_SIM in steps):
+            self.dynamics_sim_output = simulate_dynamics(
+                self.params.dynamics, self.params.n_steps
+            )
+            self.run_dynamics_sim()
+
+        if (steps is None) or (PipelineSteps.IMAGING_SIM in steps):
+            self.run_imaging_sim()
+
+        if (steps is None) or (PipelineSteps.SAMPLE_KYMOGRAPH in steps):
+            self.run_sample_kymograph()
+
+        if (steps is None) or (PipelineSteps.GENERATE_GROUND_TRUTH in steps):
+            self.run_generate_ground_truth()
+
+    def run_dynamics_sim(self):
         self.dynamics_sim_output = simulate_dynamics(
             self.params.dynamics, self.params.n_steps
         )
+
+    def run_imaging_sim(self):
+        if self.dynamics_sim_output is None:
+            raise RuntimeError(
+                "Dynamics simulation must be run before imaging simulation."
+            )
         # (alias to avoid too long line)
         particle_fluorophore_count = self.dynamics_sim_output[
             "particle_fluorophore_count"
@@ -60,9 +108,26 @@ class Pipeline:
             particle_positions=self.dynamics_sim_output["particle_positions"],
             particle_fluorophore_count=particle_fluorophore_count,
         )
+
+    def run_sample_kymograph(self):
+        if self.imaging_sim_output is None:
+            raise RuntimeError(
+                "Imaging simulation must be run before 'sample kymograph'."
+            )
         self.sample_kymograph_output = sample_kymograph(
             self.params.kymograph, frames=self.imaging_sim_output["frames"]
         )
+
+    def run_generate_ground_truth(self):
+        if self.sample_kymograph_output is None:
+            raise RuntimeError(
+                "'Sample kymograph' must be run before 'generate ground truth'."
+            )
+        if self.dynamics_sim_output is None:
+            raise RuntimeError(
+                "Dynamics simulation must be run before 'generate ground truth'"
+            )
+
         self.generate_ground_truth_output = generate_ground_truth(
             particle_positions=self.dynamics_sim_output["particle_positions"],
             particle_states=self.dynamics_sim_output["particle_states"],
@@ -77,10 +142,44 @@ class Pipeline:
         self.write_log_manager.add_output_id(self.output_id)
         self.write_log_manager.log()
 
+    def load(self, output_id: str):
+        self.output_id = output_id
+        pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
+        params_fname = pipeline_filenames.params.file_name(self.output_id)
+        if not (params_path := (self.out_dir / params_fname)).is_file():
+            raise FileNotFoundError(
+                f"{params_path}, cannot load pipeline without params file."
+            )
+
+        # dynamics
+        dynamics_fname = pipeline_filenames.dynamics_sim.file_name(self.output_id)
+        if (dynamics_path := self.out_dir / dynamics_fname).is_file():
+            self.dynamics_sim_output = np.load(dynamics_path)
+
+        # imaging
+        imaging_fname = pipeline_filenames.imaging_sim.file_name(self.output_id)
+        if (imaging_path := self.out_dir / imaging_fname).is_file():
+            self.imaging_sim_output = np.load(imaging_path)
+
+        # kymograph sampling
+        sample_kymograph_fname = pipeline_filenames.sample_kymograph.file_name(
+            self.output_id
+        )
+        if (sample_kymograph_path := self.out_dir / sample_kymograph_fname).is_file():
+            self.sample_kymograph_output = np.load(sample_kymograph_path)
+
+        # ground truth
+        ground_truth_fname = pipeline_filenames.generate_ground_truth.file_name(
+            self.output_id
+        )
+        if (ground_truth_path := self.out_dir / ground_truth_fname).is_file():
+            self.generate_ground_truth_output = np.load(ground_truth_path)
+
     def _save_params(self):
         fname = self.write_log_manager.write_log.pipeline_filenames.params.file_name(
             self.output_id
         )
+        # TODO: check if file already exists
         with open(self.out_dir / fname, "w") as f:
             yaml.dump(self.params.model_dump(mode="json"), f, sort_keys=False)
 
@@ -95,18 +194,18 @@ class Pipeline:
                 "Outputs are None. Pipeline needs to be run before it can be saved."
             )
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
-        dynamics_sim_output_fname = pipeline_filenames.dynamics_sim_output.file_name(
+        dynamics_sim_output_fname = pipeline_filenames.dynamics_sim.file_name(
             self.output_id
         )
-        imaging_sim_output_fname = pipeline_filenames.imaging_sim_output.file_name(
+        imaging_sim_output_fname = pipeline_filenames.imaging_sim.file_name(
             output_id=self.output_id
         )
-        sample_kymograph_output_fname = (
-            pipeline_filenames.sample_kymograph_output
-        ).file_name(output_id=self.output_id)
+        sample_kymograph_output_fname = (pipeline_filenames.sample_kymograph).file_name(
+            output_id=self.output_id
+        )
 
         generate_ground_truth_output_fname = (
-            pipeline_filenames.generate_ground_truth_output
+            pipeline_filenames.generate_ground_truth
         ).file_name(output_id=self.output_id)
 
         np.savez(
