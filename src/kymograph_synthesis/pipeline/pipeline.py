@@ -82,23 +82,21 @@ class Pipeline:
         # TODO: partial loading?
 
         # dynamics
-        dynamics_fname = pipeline_filenames.dynamics_sim_output.file_name(
-            self.output_id
-        )
+        dynamics_fname = pipeline_filenames.dynamics_sim.file_name(self.output_id)
         self.dynamics_sim_output = np.load(self.out_dir / dynamics_fname)
 
         # imaging
-        imaging_fname = pipeline_filenames.imaging_sim_output.file_name(self.output_id)
+        imaging_fname = pipeline_filenames.imaging_sim.file_name(self.output_id)
         self.imaging_sim_output = np.load(self.out_dir / imaging_fname)
 
         # kymograph sampling
-        sample_kymograph_fname = pipeline_filenames.sample_kymograph_output.file_name(
+        sample_kymograph_fname = pipeline_filenames.sample_kymograph.file_name(
             self.output_id
         )
         self.sample_kymograph_output = np.load(self.out_dir / sample_kymograph_fname)
 
         # ground truth
-        ground_truth_fname = pipeline_filenames.generate_ground_truth_output.file_name(
+        ground_truth_fname = pipeline_filenames.generate_ground_truth.file_name(
             self.output_id
         )
         self.generate_ground_truth_output = np.load(self.out_dir / ground_truth_fname)
@@ -121,18 +119,18 @@ class Pipeline:
                 "Outputs are None. Pipeline needs to be run before it can be saved."
             )
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
-        dynamics_sim_output_fname = pipeline_filenames.dynamics_sim_output.file_name(
+        dynamics_sim_output_fname = pipeline_filenames.dynamics_sim.file_name(
             self.output_id
         )
-        imaging_sim_output_fname = pipeline_filenames.imaging_sim_output.file_name(
+        imaging_sim_output_fname = pipeline_filenames.imaging_sim.file_name(
             output_id=self.output_id
         )
-        sample_kymograph_output_fname = (
-            pipeline_filenames.sample_kymograph_output
-        ).file_name(output_id=self.output_id)
+        sample_kymograph_output_fname = (pipeline_filenames.sample_kymograph).file_name(
+            output_id=self.output_id
+        )
 
         generate_ground_truth_output_fname = (
-            pipeline_filenames.generate_ground_truth_output
+            pipeline_filenames.generate_ground_truth
         ).file_name(output_id=self.output_id)
 
         np.savez(
