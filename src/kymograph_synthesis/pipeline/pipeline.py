@@ -34,26 +34,42 @@ class Pipeline:
 
     def __init__(
         self,
-        params: Params,
+        params: Optional[Params],
         out_dir: Path,
         output_id: Optional[str] = None,
         output_filenames: Optional[PipelineFilenames] = None,
     ):
-        self.params = params
+        self.params: Params
+        self.dynamics_sim_output: Optional[DynamicsSimOutput]
+        self.imaging_sim_output: Optional[ImagingSimOutput]
+        self.sample_kymograph_output: Optional[SampleKymographOutput]
+        self.generate_ground_truth_output: Optional[GenerateGroundTruthOutput]
+
         self.out_dir = out_dir
         self.write_log_manager = WriteLogManager(
             out_dir=out_dir, pipeline_filenames=output_filenames
         )
-        if output_id is None:
-            self.output_id = self.write_log_manager.create_new_id()
-        else:
-            self.output_id = self.output_id
 
-        # These will be created when the pipeline is run
-        self.dynamics_sim_output: Optional[DynamicsSimOutput] = None
-        self.imaging_sim_output: Optional[ImagingSimOutput] = None
-        self.sample_kymograph_output: Optional[SampleKymographOutput] = None
-        self.generate_ground_truth_output: Optional[GenerateGroundTruthOutput] = None
+        if params is None:
+            if output_id is None:
+                raise ValueError(
+                    "Either `params` or existing `output_id` to be loaded must be "
+                    "provided, found both as `None`."
+                )
+            else:
+                self.load(output_id)  # loads params and existing outputs
+        else:
+            self.params = params
+            if output_id is None:
+                self.output_id = self.write_log_manager.create_new_id()
+            else:
+                self.output_id = self.output_id
+
+            # These will be created when the pipeline is run
+            self.dynamics_sim_output = None
+            self.imaging_sim_output = None
+            self.sample_kymograph_output = None
+            self.generate_ground_truth_output = None
 
     def run(self, steps: Optional[list[PipelineSteps]] = None):
 
@@ -126,7 +142,8 @@ class Pipeline:
         self.write_log_manager.add_output_id(self.output_id)
         self.write_log_manager.log()
 
-    def load(self):
+    def load(self, output_id: str):
+        self.output_id = output_id
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         params_fname = pipeline_filenames.params.file_name(self.output_id)
         if not (params_path := (self.out_dir / params_fname)).is_file():
@@ -162,6 +179,7 @@ class Pipeline:
         fname = self.write_log_manager.write_log.pipeline_filenames.params.file_name(
             self.output_id
         )
+        # TODO: check if file already exists
         with open(self.out_dir / fname, "w") as f:
             yaml.dump(self.params.model_dump(mode="json"), f, sort_keys=False)
 
