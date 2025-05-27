@@ -128,27 +128,35 @@ class Pipeline:
 
     def load(self):
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
-        # TODO: partial loading?
+        params_fname = pipeline_filenames.params.file_name(self.output_id)
+        if not (params_path := (self.out_dir / params_fname)).is_file():
+            raise FileNotFoundError(
+                f"{params_path}, cannot load pipeline without params file."
+            )
 
         # dynamics
         dynamics_fname = pipeline_filenames.dynamics_sim.file_name(self.output_id)
-        self.dynamics_sim_output = np.load(self.out_dir / dynamics_fname)
+        if (dynamics_path := self.out_dir / dynamics_fname).is_file():
+            self.dynamics_sim_output = np.load(dynamics_path)
 
         # imaging
         imaging_fname = pipeline_filenames.imaging_sim.file_name(self.output_id)
-        self.imaging_sim_output = np.load(self.out_dir / imaging_fname)
+        if (imaging_path := self.out_dir / imaging_fname).is_file():
+            self.imaging_sim_output = np.load(imaging_path)
 
         # kymograph sampling
         sample_kymograph_fname = pipeline_filenames.sample_kymograph.file_name(
             self.output_id
         )
-        self.sample_kymograph_output = np.load(self.out_dir / sample_kymograph_fname)
+        if (sample_kymograph_path := self.out_dir / sample_kymograph_fname).is_file():
+            self.sample_kymograph_output = np.load(sample_kymograph_path)
 
         # ground truth
         ground_truth_fname = pipeline_filenames.generate_ground_truth.file_name(
             self.output_id
         )
-        self.generate_ground_truth_output = np.load(self.out_dir / ground_truth_fname)
+        if (ground_truth_path := self.out_dir / ground_truth_fname).is_file():
+            self.generate_ground_truth_output = np.load(ground_truth_path)
 
     def _save_params(self):
         fname = self.write_log_manager.write_log.pipeline_filenames.params.file_name(
