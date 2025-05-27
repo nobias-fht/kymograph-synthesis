@@ -77,6 +77,32 @@ class Pipeline:
         self.write_log_manager.add_output_id(self.output_id)
         self.write_log_manager.log()
 
+    def load(self):
+        pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
+        # TODO: partial loading?
+
+        # dynamics
+        dynamics_fname = pipeline_filenames.dynamics_sim_output.file_name(
+            self.output_id
+        )
+        self.dynamics_sim_output = np.load(self.out_dir / dynamics_fname)
+
+        # imaging
+        imaging_fname = pipeline_filenames.imaging_sim_output.file_name(self.output_id)
+        self.imaging_sim_output = np.load(self.out_dir / imaging_fname)
+
+        # kymograph sampling
+        sample_kymograph_fname = pipeline_filenames.sample_kymograph_output.file_name(
+            self.output_id
+        )
+        self.sample_kymograph_output = np.load(self.out_dir / sample_kymograph_fname)
+
+        # ground truth
+        ground_truth_fname = pipeline_filenames.generate_ground_truth_output.file_name(
+            self.output_id
+        )
+        self.generate_ground_truth_output = np.load(self.out_dir / ground_truth_fname)
+
     def _save_params(self):
         fname = self.write_log_manager.write_log.pipeline_filenames.params.file_name(
             self.output_id
