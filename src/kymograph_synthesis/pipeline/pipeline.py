@@ -1,3 +1,4 @@
+from enum import Enum, auto
 from typing import Optional, cast, Mapping
 from pathlib import Path
 import yaml
@@ -19,6 +20,14 @@ from .steps.generate_ground_truth import (
     GenerateGroundTruthOutput,
 )
 from .write_log import WriteLogManager, PipelineFilenames
+
+
+class PipelineSteps(Enum):
+
+    DYNAMICS_SIM = auto()
+    IMAGING_SIM = auto()
+    SAMPLE_KYMOGRAPH = auto()
+    GENERATE_GROUND_TRUTH = auto()
 
 
 class Pipeline:
@@ -46,10 +55,33 @@ class Pipeline:
         self.sample_kymograph_output: Optional[SampleKymographOutput] = None
         self.generate_ground_truth_output: Optional[GenerateGroundTruthOutput] = None
 
-    def run(self):
+    def run(self, steps: Optional[list[PipelineSteps]] = None):
+
+        if (steps is None) or (PipelineSteps.DYNAMICS_SIM in steps):
+            self.dynamics_sim_output = simulate_dynamics(
+                self.params.dynamics, self.params.n_steps
+            )
+            self.run_dynamics_sim()
+
+        if (steps is None) or (PipelineSteps.IMAGING_SIM in steps):
+            self.run_imaging_sim()
+
+        if (steps is None) or (PipelineSteps.SAMPLE_KYMOGRAPH in steps):
+            self.run_sample_kymograph()
+
+        if (steps is None) or (PipelineSteps.GENERATE_GROUND_TRUTH in steps):
+            self.run_generate_ground_truth()
+
+    def run_dynamics_sim(self):
         self.dynamics_sim_output = simulate_dynamics(
             self.params.dynamics, self.params.n_steps
         )
+
+    def run_imaging_sim(self):
+        if self.dynamics_sim_output is None:
+            raise RuntimeError(
+                "Dynamics simulation must be run before imaging simulation."
+            )
         # (alias to avoid too long line)
         particle_fluorophore_count = self.dynamics_sim_output[
             "particle_fluorophore_count"
@@ -60,9 +92,26 @@ class Pipeline:
             particle_positions=self.dynamics_sim_output["particle_positions"],
             particle_fluorophore_count=particle_fluorophore_count,
         )
+
+    def run_sample_kymograph(self):
+        if self.imaging_sim_output is None:
+            raise RuntimeError(
+                "Imaging simulation must be run before 'sample kymograph'."
+            )
         self.sample_kymograph_output = sample_kymograph(
             self.params.kymograph, frames=self.imaging_sim_output["frames"]
         )
+
+    def run_generate_ground_truth(self):
+        if self.sample_kymograph_output is None:
+            raise RuntimeError(
+                "'Sample kymograph' must be run before 'generate ground truth'."
+            )
+        if self.dynamics_sim_output is None:
+            raise RuntimeError(
+                "Dynamics simulation must be run before 'generate ground truth'"
+            )
+
         self.generate_ground_truth_output = generate_ground_truth(
             particle_positions=self.dynamics_sim_output["particle_positions"],
             particle_states=self.dynamics_sim_output["particle_states"],
