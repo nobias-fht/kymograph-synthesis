@@ -16,6 +16,7 @@ from .render_params import RenderingParams
 from .dynamics_params import DynamicsParams
 from .kymograph_params import KymographParams
 from .ground_truth_params import GroundTruthFuncParams, StateGroundTruth
+from .utils import find_version
 
 
 class Params(BaseModel):
@@ -34,6 +35,8 @@ class Params(BaseModel):
     ground_truth_funcs: list[GroundTruthFuncParams] = Field(
         default=[StateGroundTruth()]
     )
+
+    version: str = Field(default_factory=find_version)
 
     @field_validator("kymograph", mode="before")
     @classmethod
