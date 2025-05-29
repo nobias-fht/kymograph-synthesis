@@ -129,8 +129,8 @@ class Pipeline:
             )
 
         self.generate_ground_truth_output = generate_ground_truth(
-            particle_positions=self.dynamics_sim_output["particle_positions"],
-            particle_states=self.dynamics_sim_output["particle_states"],
+            self.params.ground_truth_funcs,
+            self.dynamics_sim_output,
             n_spatial_values=self.sample_kymograph_output["n_spatial_values"],
         )
 
@@ -146,10 +146,14 @@ class Pipeline:
         self.output_id = output_id
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         params_fname = pipeline_filenames.params.file_name(self.output_id)
-        if not (params_path := (self.out_dir / params_fname)).is_file():
+        params_path = self.out_dir / params_fname
+        if not params_path.is_file():
             raise FileNotFoundError(
                 f"{params_path}, cannot load pipeline without params file."
             )
+        with open(params_path, "r") as f:
+            params_dict = yaml.load(f, Loader=yaml.SafeLoader)
+            self.params = Params.model_validate(params_dict)
 
         # dynamics
         dynamics_fname = pipeline_filenames.dynamics_sim.file_name(self.output_id)

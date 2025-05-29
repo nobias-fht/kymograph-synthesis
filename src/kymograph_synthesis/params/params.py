@@ -15,6 +15,7 @@ from pydantic import (
 from .render_params import RenderingParams
 from .dynamics_params import DynamicsParams
 from .kymograph_params import KymographParams
+from .ground_truth_params import GroundTruthFuncParams, StateGroundTruth
 
 
 class Params(BaseModel):
@@ -29,6 +30,10 @@ class Params(BaseModel):
     rendering: RenderingParams
 
     kymograph: KymographParams
+
+    ground_truth_funcs: list[GroundTruthFuncParams] = Field(
+        default=[StateGroundTruth()]
+    )
 
     @field_validator("kymograph", mode="before")
     @classmethod
