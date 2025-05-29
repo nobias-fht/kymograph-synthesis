@@ -16,7 +16,9 @@ from pydantic import (
 logger = logging.getLogger(__name__)
 
 # alphanumeric + dash and underscore, has to include "{output id}""
-FILE_NAME_REGEX = "^(?:[a-zA-Z0-9_-]*\{output_id\}[a-zA-Z0-9_-]*)$"
+# TODO: now also allowed are curly brackets for {type} in visual ground truth
+#   This should be validated better
+FILE_NAME_REGEX = "^(?:[a-zA-Z0-9_-}{]*\{output_id\}[a-zA-Z0-9_-}{]*)$"
 # alphanumeric . at the start and one other . allowed (for example .tar.gz)
 FILE_EXTENSION_REGEX = "^\.[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)?$"
 
@@ -62,7 +64,7 @@ class PipelineFilenames(BaseModel):
     )
 
     kymograph_gt_visual: OutputFileName = OutputFileName(
-        name="kymograph_gt_{output_id}", extension=".png"
+        name="kymograph_gt_{{type}}_{output_id}", extension=".png"
     )
 
     animation_2d_visual: OutputFileName = OutputFileName(

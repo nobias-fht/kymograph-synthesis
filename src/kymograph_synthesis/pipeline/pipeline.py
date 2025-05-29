@@ -17,9 +17,11 @@ from .steps.simulate_imaging import simulate_imaging, ImagingSimOutput
 from .steps.sample_kymograph import sample_kymograph, SampleKymographOutput
 from .steps.generate_ground_truth import (
     generate_ground_truth,
+    save_ground_truth_visualization,
     GenerateGroundTruthOutput,
 )
 from .write_log import WriteLogManager, PipelineFilenames
+from .utils import _resize_image
 
 
 class PipelineSteps(Enum):
@@ -270,7 +272,7 @@ class Pipeline:
         if self.sample_kymograph_output is None:
             raise RuntimeError(
                 "Cannot save kymograph output before kymograph sampling step has "
-                "happend."
+                "happened."
             )
 
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
@@ -297,23 +299,7 @@ class Pipeline:
         kymograph_gt_visual_fname = pipeline_filenames.kymograph_gt_visual.file_name(
             output_id=self.output_id
         )
-        file_path = self.out_dir / kymograph_gt_visual_fname
-        kymograph_gt_raw = self.generate_ground_truth_output["ground_truth"]
-        kymograph_gt_resized = _resize_image(kymograph_gt_raw, factor=4)
-        plt.imsave(
-            file_path,
-            np.squeeze(kymograph_gt_resized),
-            cmap="gray",
+
+        save_ground_truth_visualization(
+            self.generate_ground_truth_output, kymograph_gt_visual_fname, self.out_dir
         )
-
-
-def _resize_image(image: NDArray, factor: int) -> NDArray:
-    return np.repeat(
-        np.repeat(
-            image,
-            repeats=factor,
-            axis=0,
-        ),
-        repeats=factor,
-        axis=1,
-    )
