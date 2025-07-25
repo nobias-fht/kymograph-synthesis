@@ -7,9 +7,11 @@ from scipy.interpolate import interp1d
 
 class StaticPath(Protocol):
 
-    def __call__(self, ratio: NDArray) -> NDArray: ...
+    def __call__(self, ratio: NDArray) -> NDArray[np.float_]: ...
 
     def length(self) -> float: ...
+
+    def tangents(self, ratios: NDArray[np.float_]) -> NDArray[np.float_]: ...
 
 
 class LinearPath:
@@ -27,6 +29,10 @@ class LinearPath:
 
     def length(self) -> float:
         return np.linalg.norm(self.direction, ord=2)
+
+    def tangents(self, ratios: NDArray[np.float_]) -> NDArray[np.float_]:
+        tangent_vec = self.direction / np.sum(self.direction ** 2) ** 0.5
+        return np.tile(tangent_vec, (*ratios.shape, 1))
 
 
 class PiecewiseLinearPath:
@@ -83,6 +89,17 @@ class QuadraticBezierPath:
         t = ratio_mapping(ratio)
         return self._bezier_func(t)
 
+    def tangents(self, t: NDArray) -> NDArray:
+        shape = t.shape
+        p0, p1, p2 = self.points
+        result = (
+            p1
+            + np.outer(2*(1 - t.flatten()), (p0 - p1))
+            + np.outer(2*t.flatten(), (p2 - p1))
+        )
+        result.reshape(*shape, self.dims)
+        return result / np.sum(result**2, axis=-1, keepdims=True) ** 0.5
+
     def _bezier_func(self, t: NDArray) -> NDArray:
         shape = t.shape
         p0, p1, p2 = self.points
@@ -137,17 +154,34 @@ class PiecewiseQuadraticBezierPath:
             [np.array([0]), np.cumsum(self.segment_lengths) / self.total_length]
         )
 
-    def __call__(self, ratio: NDArray) -> NDArray:
+    def __call__(self, ratio: NDArray, thickness=1) -> NDArray:
+        if (thickness > 1) and (self.dims != 2):
+            raise NotImplementedError("Cannot give a thickness for dims != 2.")
+
         segment_labels = np.digitize(ratio, bins=self.segment_ratio_bins[1:], right=True)
-        result = np.zeros((*ratio.shape, self.dims))  # initialize place holder
+        result = np.zeros((*ratio.shape, thickness, self.dims))  # initialize place holder
         for n in range(self.n_segments):
-            linear_path_segment = self.path_segments[n]
+            path_segment = self.path_segments[n]
             segment_ratios = ratio[segment_labels == n]
             # scale correctly
             segment_ratios = (segment_ratios - self.segment_ratio_bins[n]) * (
                 self.total_length / self.segment_lengths[n]
             )
-            segment_result = linear_path_segment(segment_ratios)
+
+            segment_coords = path_segment(segment_ratios)
+            if thickness > 1:
+                segment_tangents = path_segment.tangents(segment_ratios)
+                segment_normals = np.stack([segment_tangents[:,1], -segment_tangents[:,0]], axis=-1)
+                segment_result = np.linspace(
+                    segment_coords - 0.5*thickness*segment_normals, 
+                    segment_coords + 0.5*thickness*segment_normals,
+                    thickness,
+                    endpoint = True
+                )
+                segment_result = np.moveaxis(segment_result, 0, 1)
+            else:
+                segment_result = segment_coords[:, np.newaxis]
+
             result[segment_labels == n] = segment_result
         return result
 
