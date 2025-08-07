@@ -3,6 +3,7 @@ from typing import Protocol, Callable, Any
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 from scipy.interpolate import interp1d
+from scipy.integrate import quad
 
 
 class StaticPath(Protocol):
@@ -90,7 +91,7 @@ class QuadraticBezierPath:
     def __call__(self, ratio: NDArray[np.floating]) -> NDArray[np.floating]:
         ratio[ratio < 0] = np.nan
         ratio[ratio > 1] = np.nan
-        ratio_mapping = self.ratio_mapping(n=128)
+        ratio_mapping = self.ratio_mapping()
         t = ratio_mapping(ratio)
         return self._bezier_func(t)
 
@@ -106,13 +107,24 @@ class QuadraticBezierPath:
         return result / np.sum(result**2, axis=-1, keepdims=True) ** 0.5
 
     def length(self) -> float:
-        return self._calc_lengths().sum()
+        A = self.points[1] - self.points[0]
+        B = self.points[2] - self.points[1]
+
+        def speed(t):
+            point = (1 - t) * A + t * B
+            return 2 * np.linalg.norm(point)
+
+        length, _ = quad(speed, 0.0, 1.0)
+        return length
 
     def ratio_mapping(
-        self, n=128
+        self
     ) -> Callable[[NDArray[np.floating]], NDArray[np.floating]]:
         # TODO: allow change of n?
-        lengths = self._calc_lengths(n=n)
+        # lengths = self._calc_lengths(n=n)
+        total_length = self.length()
+        n = int(total_length) * 4
+        lengths = self._calc_lengths(n)
         x = np.concatenate([np.array([0]), np.cumsum(lengths) / np.cumsum(lengths)[-1]])
         return interp1d(x, np.linspace(0, 1.0, n))
 
@@ -133,6 +145,8 @@ class QuadraticBezierPath:
         vecs = coords[1:] - coords[:-1]
         lengths = np.linalg.norm(vecs, ord=2, axis=1)
         return lengths
+    
+
 
 
 class PiecewiseQuadraticBezierPath:
