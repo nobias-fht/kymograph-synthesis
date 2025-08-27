@@ -98,10 +98,8 @@ class QuadraticBezierPath:
     def tangents(self, ratios: NDArray[np.floating]) -> NDArray[np.floating]:
         shape = ratios.shape
         p0, p1, p2 = self.points
-        result = (
-            p1
-            + np.outer(2 * (1 - ratios.flatten()), (p0 - p1))
-            + np.outer(2 * ratios.flatten(), (p2 - p1))
+        result = +np.outer(-2 * (1 - ratios.flatten()), (p0 - p1)) + np.outer(
+            2 * ratios.flatten(), (p2 - p1)
         )
         result.reshape(*shape, self.dims)
         return result / np.sum(result**2, axis=-1, keepdims=True) ** 0.5
@@ -117,9 +115,7 @@ class QuadraticBezierPath:
         length, _ = quad(speed, 0.0, 1.0)
         return length
 
-    def ratio_mapping(
-        self
-    ) -> Callable[[NDArray[np.floating]], NDArray[np.floating]]:
+    def ratio_mapping(self) -> Callable[[NDArray[np.floating]], NDArray[np.floating]]:
         # TODO: allow change of n?
         # lengths = self._calc_lengths(n=n)
         total_length = self.length()
@@ -145,8 +141,6 @@ class QuadraticBezierPath:
         vecs = coords[1:] - coords[:-1]
         lengths = np.linalg.norm(vecs, ord=2, axis=1)
         return lengths
-    
-
 
 
 class PiecewiseQuadraticBezierPath:
@@ -214,9 +208,25 @@ class PiecewiseQuadraticBezierPath:
             result[segment_labels == n] = segment_result
         return result
 
+    def tangents(self, ratio: NDArray[np.floating]):
+        segment_labels = np.digitize(
+            ratio, bins=self.segment_ratio_bins[1:], right=True
+        )
+        result = np.zeros((*ratio.shape, self.dims))  # initialize place holder
+        for n in range(self.n_segments):
+            path_segment = self.path_segments[n]
+            segment_ratios = ratio[segment_labels == n]
+            # scale correctly
+            segment_ratios = (segment_ratios - self.segment_ratio_bins[n]) * (
+                self.total_length / self.segment_lengths[n]
+            )
+            segment_tangents = path_segment.tangents(segment_ratios)
+            result[segment_labels == n] = segment_tangents
+
+        return result
+
     def length(self):
         return sum(self._segment_lengths())
-    
+
     def _segment_lengths(self):
         return [segment.length() for segment in self.path_segments]
-
