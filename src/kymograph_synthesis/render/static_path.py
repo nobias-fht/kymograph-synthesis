@@ -102,16 +102,15 @@ class QuadraticBezierPath:
             2 * ratios.flatten(), (p2 - p1)
         )
         result.reshape(*shape, self.dims)
-        return result / np.sum(result**2, axis=-1, keepdims=True) ** 0.5
+        result = result / np.linalg.norm(result, axis=-1, keepdims=True)
+        return result
 
     def length(self) -> float:
-        A = self.points[1] - self.points[0]
-        B = self.points[2] - self.points[1]
-
-        def speed(t):
-            point = (1 - t) * A + t * B
-            return 2 * np.linalg.norm(point)
-
+        # TODO: derivative already implemented in tangents, reuse?
+        p0, p1, p2 = self.points
+        def speed(ratio: float):
+            tangent = -2 * (1 - ratio) * (p0 - p1) + 2 * ratio * (p2 - p1)
+            return np.linalg.norm(tangent)
         length, _ = quad(speed, 0.0, 1.0)
         return length
 
