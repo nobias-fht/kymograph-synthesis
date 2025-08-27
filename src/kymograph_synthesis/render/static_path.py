@@ -121,6 +121,8 @@ class QuadraticBezierPath:
         total_length = self.length()
         n = int(total_length) * 4
         lengths = self._calc_lengths(n)
+        if len(lengths) == 0:
+            return lambda _: np.array([0])
         x = np.concatenate([np.array([0]), np.cumsum(lengths) / np.cumsum(lengths)[-1]])
         return interp1d(x, np.linspace(0, 1.0, n))
 
