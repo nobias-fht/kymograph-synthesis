@@ -1,37 +1,44 @@
-from typing import Protocol, Callable
+from typing import Protocol, Callable, Any
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 from scipy.interpolate import interp1d
+from scipy.integrate import quad
 
 
 class StaticPath(Protocol):
 
-    def __call__(self, ratio: NDArray) -> NDArray: ...
+    def __call__(self, ratio: NDArray[np.floating]) -> NDArray[np.floating]: ...
 
     def length(self) -> float: ...
+
+    def tangents(self, ratios: NDArray[np.floating]) -> NDArray[np.floating]: ...
 
 
 class LinearPath:
 
-    def __init__(self, start: NDArray, end: NDArray):
+    def __init__(self, start: NDArray[np.floating], end: NDArray[np.floating]):
         self.dims = len(start)
         self.start = start
         self.end = end
         self.direction = end - start
 
-    def __call__(self, ratio: NDArray) -> NDArray:
+    def __call__(self, ratio: NDArray[np.floating]) -> NDArray[np.floating]:
         shape = ratio.shape
         result = self.start.reshape(1, -1) + np.outer(ratio.flatten(), self.direction)
         return result.reshape(*shape, self.dims)
 
     def length(self) -> float:
-        return np.linalg.norm(self.direction, ord=2)
+        return np.linalg.norm(self.direction, ord=2).item()
+
+    def tangents(self, ratios: NDArray[np.floating]) -> NDArray[np.floating]:
+        tangent_vec = self.direction / np.sum(self.direction**2) ** 0.5
+        return np.tile(tangent_vec, (*ratios.shape, 1))
 
 
 class PiecewiseLinearPath:
 
-    def __init__(self, vertices: list[NDArray]):
+    def __init__(self, vertices: list[NDArray[np.floating]]):
         # TODO: rename variable to be more cohesive with piecewise bezier path
         self.n_segments = len(vertices) - 1
         self.vertices = vertices
@@ -40,7 +47,7 @@ class PiecewiseLinearPath:
             LinearPath(start=self.vertices[i], end=self.vertices[i + 1])
             for i in range(self.n_segments)
         ]
-        self.segment_magnitudes: NDArray[np.float_] = np.array(
+        self.segment_magnitudes: NDArray[np.floating] = np.array(
             [
                 np.linalg.norm(path_segment.end - path_segment.start, ord=2)
                 for path_segment in self.linear_path_segments
@@ -51,7 +58,7 @@ class PiecewiseLinearPath:
             [np.array([0]), np.cumsum(self.segment_magnitudes) / self.total_length]
         )
 
-    def __call__(self, ratio: NDArray) -> NDArray:
+    def __call__(self, ratio: NDArray[np.floating]) -> NDArray[np.floating]:
         segment_mask = np.digitize(ratio, bins=self.segment_ratio_bins[1:], right=True)
         result = np.zeros((*ratio.shape, self.dims))  # initialize place holder
         for n in range(self.n_segments):
@@ -67,23 +74,58 @@ class PiecewiseLinearPath:
         return result
 
     def length(self) -> float:
-        raise [segment.length() for segment in self.linear_path_segments]
+        return sum([segment.length() for segment in self.linear_path_segments])
+
+    # TODO: tangents
 
 
 class QuadraticBezierPath:
 
-    def __init__(self, points: tuple[NDArray, NDArray, NDArray]):
+    def __init__(
+        self,
+        points: tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.floating]],
+    ):
         self.points = points
         self.dims = len(points[0])
 
-    def __call__(self, ratio: NDArray) -> NDArray:
+    def __call__(self, ratio: NDArray[np.floating]) -> NDArray[np.floating]:
         ratio[ratio < 0] = np.nan
         ratio[ratio > 1] = np.nan
-        ratio_mapping = self.ratio_mapping(n=128)
+        ratio_mapping = self.ratio_mapping()
         t = ratio_mapping(ratio)
         return self._bezier_func(t)
 
-    def _bezier_func(self, t: NDArray) -> NDArray:
+    def tangents(self, ratios: NDArray[np.floating]) -> NDArray[np.floating]:
+        shape = ratios.shape
+        p0, p1, p2 = self.points
+        result = +np.outer(-2 * (1 - ratios.flatten()), (p0 - p1)) + np.outer(
+            2 * ratios.flatten(), (p2 - p1)
+        )
+        result.reshape(*shape, self.dims)
+        result = result / np.linalg.norm(result, axis=-1, keepdims=True)
+        return result
+
+    def length(self) -> float:
+        # TODO: derivative already implemented in tangents, reuse?
+        p0, p1, p2 = self.points
+        def speed(ratio: float):
+            tangent = -2 * (1 - ratio) * (p0 - p1) + 2 * ratio * (p2 - p1)
+            return np.linalg.norm(tangent)
+        length, _ = quad(speed, 0.0, 1.0)
+        return length
+
+    def ratio_mapping(self) -> Callable[[NDArray[np.floating]], NDArray[np.floating]]:
+        # TODO: allow change of n?
+        # lengths = self._calc_lengths(n=n)
+        total_length = self.length()
+        n = int(total_length) * 4
+        lengths = self._calc_lengths(n)
+        if len(lengths) == 0:
+            return lambda _: np.array([0])
+        x = np.concatenate([np.array([0]), np.cumsum(lengths) / np.cumsum(lengths)[-1]])
+        return interp1d(x, np.linspace(0, 1.0, n))
+
+    def _bezier_func(self, t: NDArray[np.floating]) -> NDArray[np.floating]:
         shape = t.shape
         p0, p1, p2 = self.points
         result = (
@@ -94,26 +136,17 @@ class QuadraticBezierPath:
         result.reshape(*shape, self.dims)
         return result
 
-    def ratio_mapping(self, n=128) -> Callable[[NDArray], NDArray]:
-        # TODO: allow change of n?
-        lengths = self._calc_lengths(n=n)
-        x = np.concatenate([np.array([0]), np.cumsum(lengths) / np.cumsum(lengths)[-1]])
-        return interp1d(x, np.linspace(0, 1.0, n))
-
-    def _calc_lengths(self, n=128) -> NDArray[np.float_]:
+    def _calc_lengths(self, n=128) -> NDArray[np.floating]:
         samples = np.linspace(0, 1, n)
         coords = self._bezier_func(samples)
         vecs = coords[1:] - coords[:-1]
         lengths = np.linalg.norm(vecs, ord=2, axis=1)
         return lengths
 
-    def length(self) -> float:
-        return self._calc_lengths().sum()
-
 
 class PiecewiseQuadraticBezierPath:
 
-    def __init__(self, points: list[NDArray]):
+    def __init__(self, points: list[NDArray[np.floating]]):
 
         self.dims = len(points[0])
         n_points = len(points)
@@ -124,7 +157,7 @@ class PiecewiseQuadraticBezierPath:
         for i in range(0, n_points - 2):
             self.path_segments.append(
                 QuadraticBezierPath(
-                    points=[midpoints[i], points[i + 1], midpoints[i + 1]]
+                    points=(midpoints[i], points[i + 1], midpoints[i + 1])
                 )
             )
         self.path_segments.append(LinearPath(start=midpoints[-1], end=points[-1]))
@@ -137,24 +170,64 @@ class PiecewiseQuadraticBezierPath:
             [np.array([0]), np.cumsum(self.segment_lengths) / self.total_length]
         )
 
-    def __call__(self, ratio: NDArray) -> NDArray:
-        segment_labels = np.digitize(ratio, bins=self.segment_ratio_bins[1:], right=True)
-        result = np.zeros((*ratio.shape, self.dims))  # initialize place holder
+    def __call__(
+        self, ratio: NDArray[np.floating], thickness=1
+    ) -> NDArray[np.floating]:
+        if (thickness > 1) and (self.dims != 2):
+            raise NotImplementedError("Cannot give a thickness for dims != 2.")
+
+        segment_labels = np.digitize(
+            ratio, bins=self.segment_ratio_bins[1:], right=True
+        )
+        result = np.zeros(
+            (*ratio.shape, thickness, self.dims)
+        )  # initialize place holder
         for n in range(self.n_segments):
-            linear_path_segment = self.path_segments[n]
+            path_segment = self.path_segments[n]
             segment_ratios = ratio[segment_labels == n]
             # scale correctly
             segment_ratios = (segment_ratios - self.segment_ratio_bins[n]) * (
                 self.total_length / self.segment_lengths[n]
             )
-            segment_result = linear_path_segment(segment_ratios)
+
+            segment_coords = path_segment(segment_ratios)
+            if thickness > 1:
+                segment_tangents = path_segment.tangents(segment_ratios)
+                segment_normals = np.stack(
+                    [segment_tangents[:, 1], -segment_tangents[:, 0]], axis=-1
+                )
+                segment_result = np.linspace(
+                    segment_coords - 0.5 * thickness * segment_normals,
+                    segment_coords + 0.5 * thickness * segment_normals,
+                    thickness,
+                    endpoint=True,
+                )
+                segment_result = np.moveaxis(segment_result, 0, 1)
+            else:
+                segment_result = segment_coords[:, np.newaxis]
+
             result[segment_labels == n] = segment_result
         return result
 
-    def _segment_lengths(self):
-        return [
-            segment.length() for segment in self.path_segments
-        ]
-    
+    def tangents(self, ratio: NDArray[np.floating]):
+        segment_labels = np.digitize(
+            ratio, bins=self.segment_ratio_bins[1:], right=True
+        )
+        result = np.zeros((*ratio.shape, self.dims))  # initialize place holder
+        for n in range(self.n_segments):
+            path_segment = self.path_segments[n]
+            segment_ratios = ratio[segment_labels == n]
+            # scale correctly
+            segment_ratios = (segment_ratios - self.segment_ratio_bins[n]) * (
+                self.total_length / self.segment_lengths[n]
+            )
+            segment_tangents = path_segment.tangents(segment_ratios)
+            result[segment_labels == n] = segment_tangents
+
+        return result
+
     def length(self):
         return sum(self._segment_lengths())
+
+    def _segment_lengths(self):
+        return [segment.length() for segment in self.path_segments]
