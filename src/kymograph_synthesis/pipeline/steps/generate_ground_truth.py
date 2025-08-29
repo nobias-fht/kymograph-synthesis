@@ -31,11 +31,14 @@ def generate_ground_truth(
                     dynamics_output["particle_positions"],
                     dynamics_output["particle_states"],
                     n_spatial_values,
+                    **ground_truth_func_params.model_dump(exclude={"name"}),
                 )
             case GroundTruthFuncCollection.INSTANCE:
                 output[GroundTruthFuncCollection.INSTANCE] = (
                     generate_instance_ground_truth(
-                        dynamics_output["particle_positions"], n_spatial_values
+                        dynamics_output["particle_positions"],
+                        n_spatial_values,
+                        **ground_truth_func_params.model_dump(exclude={"name"}),
                     )
                 )
             case _:
