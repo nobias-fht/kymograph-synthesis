@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Optional, cast, Mapping
+from typing import Optional, cast, Mapping, overload, TypeGuard, Protocol
 from pathlib import Path
 import yaml
 from PIL import Image
@@ -32,14 +32,65 @@ class PipelineSteps(Enum):
     GENERATE_GROUND_TRUTH = auto()
 
 
+def is_rw_pipeline(pipeline: "Pipeline") -> "TypeGuard[ReadWritePipeline]":
+    return (
+        (pipeline.out_dir is not None)
+        and (pipeline.write_log_manager is not None)
+        and (pipeline.output_id is not None)
+    )
+
+# TODO: refactor to separate writing and pipeline running
+
+class ReadWritePipeline(Protocol):
+    params: Params
+    out_dir: Path
+    write_log_manager: WriteLogManager
+    output_id: str
+
+    dynamics_sim_output: Optional[DynamicsSimOutput]
+    imaging_sim_output: Optional[ImagingSimOutput]
+    sample_kymograph_output: Optional[SampleKymographOutput]
+    generate_ground_truth_output: Optional[GenerateGroundTruthOutput]
+
+    def _save_params(self): ...
+    def _save_outputs(self): ...
+    def _save_visualization(self): ...
+    def _save_animation_gif(self): ...
+    def _save_kymograph_png(self): ...
+    def _save_kymograph_gt_png(self): ...
+
 class Pipeline:
 
+    @overload
     def __init__(
         self,
-        params: Optional[Params],
+        params: Params,
+        out_dir: None,
+        output_id: None = ...,
+        output_filenames: None = ...,
+    ): ...
+    @overload
+    def __init__(
+        self,
+        params: Params,
         out_dir: Path,
-        output_id: Optional[str] = None,
-        output_filenames: Optional[PipelineFilenames] = None,
+        output_id: None = ...,
+        output_filenames: PipelineFilenames | None = ...,
+    ): ...
+    @overload
+    def __init__(
+        self,
+        params: None,
+        out_dir: Path,
+        output_id: str = ...,
+        output_filenames: PipelineFilenames | None = ...,
+    ): ...
+    def __init__(
+        self,
+        params: Params | None,
+        out_dir: Path | None,
+        output_id: str | None = None,
+        output_filenames: PipelineFilenames | None = None,
     ):
         self.params: Params
         self.dynamics_sim_output: Optional[DynamicsSimOutput]
@@ -47,11 +98,31 @@ class Pipeline:
         self.sample_kymograph_output: Optional[SampleKymographOutput]
         self.generate_ground_truth_output: Optional[GenerateGroundTruthOutput]
 
-        self.out_dir = out_dir
-        self.write_log_manager = WriteLogManager(
-            out_dir=out_dir, pipeline_filenames=output_filenames
-        )
+        self._out_dir: Path | None = out_dir
+        self.output_id: str | None = output_id
+        if out_dir is not None:
+            self._init_w_outdir(params, out_dir, output_id, output_filenames)
+        else:
+            assert params is not None  # TODO: why is this not handled by overloads
+            self._init_wo_out_dir(params)
 
+        # These will be created when the pipeline is run
+        self.dynamics_sim_output = None
+        self.imaging_sim_output = None
+        self.sample_kymograph_output = None
+        self.generate_ground_truth_output = None
+
+    def _init_w_outdir(
+        self,
+        params: Params | None,
+        out_dir: Path,
+        output_id: str | None,
+        output_filenames: PipelineFilenames | None,
+    ):
+        self._out_dir = out_dir
+        self.write_log_manager = WriteLogManager(
+            out_dir, pipeline_filenames=output_filenames
+        )
         if params is None:
             if output_id is None:
                 raise ValueError(
@@ -61,17 +132,29 @@ class Pipeline:
             else:
                 self.load(output_id)  # loads params and existing outputs
         else:
-            self.params = params
             if output_id is None:
-                self.output_id = self.write_log_manager.create_new_id()
+                self.output_id: str | None = self.write_log_manager.create_new_id()
             else:
-                self.output_id = self.output_id
+                self.output_id = output_id
 
-            # These will be created when the pipeline is run
-            self.dynamics_sim_output = None
-            self.imaging_sim_output = None
-            self.sample_kymograph_output = None
-            self.generate_ground_truth_output = None
+    def _init_wo_out_dir(self, params: Params):
+        self._out_dir = None
+        self.output_id = None
+        self.write_log_manager = None
+        self.params = params
+
+    @property
+    def out_dir(self) -> Path | None:
+        return self._out_dir
+
+    @out_dir.setter
+    def out_dir(self, value: Path | None):
+        if isinstance(value, Path):
+            self.write_log_manager = WriteLogManager(value, pipeline_filenames=None)
+        elif value is None:
+            self.write_log_manager = None
+        else:
+            raise TypeError("`out_dir` attribute can only be `Path` or `None`.")
 
     def run(self, steps: Optional[list[PipelineSteps]] = None):
 
@@ -136,7 +219,20 @@ class Pipeline:
             n_spatial_values=self.sample_kymograph_output["n_spatial_values"],
         )
 
+    # TODO: rename?
+    def _guard_io_available(self):
+        if self._out_dir is None:
+            raise ValueError(
+                "Cannot load or save kymographs because not output directory has been "
+                "set. Set the attribute `outdir`."
+            )
+
     def save(self, save_visualization: bool = True):
+        if not is_rw_pipeline(self):
+            raise ValueError(
+                "Cannot load or save kymographs because not output directory has been "
+                "set. Set the attribute `outdir`."
+            )
         self._save_params()
         self._save_outputs()
         if save_visualization:
@@ -145,6 +241,11 @@ class Pipeline:
         self.write_log_manager.log()
 
     def load(self, output_id: str):
+        if not is_rw_pipeline(self):
+            raise ValueError(
+                "Cannot load or save kymographs because not output directory has been "
+                "set. Set the attribute `outdir`."
+            )
         self.output_id = output_id
         pipeline_filenames = self.write_log_manager.write_log.pipeline_filenames
         params_fname = pipeline_filenames.params.file_name(self.output_id)
@@ -182,6 +283,11 @@ class Pipeline:
             self.generate_ground_truth_output = np.load(ground_truth_path)
 
     def _save_params(self):
+        if not is_rw_pipeline(self):
+            raise ValueError(
+                "Cannot load or save kymographs because not output directory has been "
+                "set. Set the attribute `outdir`."
+            )
         fname = self.write_log_manager.write_log.pipeline_filenames.params.file_name(
             self.output_id
         )
@@ -190,6 +296,11 @@ class Pipeline:
             yaml.dump(self.params.model_dump(mode="json"), f, sort_keys=False)
 
     def _save_outputs(self):
+        if not is_rw_pipeline(self):
+            raise ValueError(
+                "Cannot load or save kymographs because not output directory has been "
+                "set. Set the attribute `outdir`."
+            )
         if (
             (self.dynamics_sim_output is None)
             or (self.imaging_sim_output is None)
@@ -237,6 +348,11 @@ class Pipeline:
         self._save_animation_gif()
 
     def _save_animation_gif(self):
+        if not is_rw_pipeline(self):
+            raise ValueError(
+                "Cannot load or save kymographs because not output directory has been "
+                "set. Set the attribute `outdir`."
+            )
         if self.imaging_sim_output is None:
             raise RuntimeError(
                 "Imaging sim output has to be generated before animation gif can be "
@@ -269,6 +385,11 @@ class Pipeline:
         )
 
     def _save_kymograph_png(self):
+        if not is_rw_pipeline(self):
+            raise ValueError(
+                "Cannot load or save kymographs because not output directory has been "
+                "set. Set the attribute `outdir`."
+            )
         if self.sample_kymograph_output is None:
             raise RuntimeError(
                 "Cannot save kymograph output before kymograph sampling step has "
@@ -290,6 +411,11 @@ class Pipeline:
         )
 
     def _save_kymograph_gt_png(self):
+        if not is_rw_pipeline(self):
+            raise ValueError(
+                "Cannot load or save kymographs because not output directory has been "
+                "set. Set the attribute `outdir`."
+            )
         if self.generate_ground_truth_output is None:
             raise RuntimeError(
                 "Cannot save kymograph ground truth before the ground truth has been "
@@ -303,3 +429,6 @@ class Pipeline:
         save_ground_truth_visualization(
             self.generate_ground_truth_output, kymograph_gt_visual_fname, self.out_dir
         )
+
+
+
