@@ -86,6 +86,8 @@ def create_particle_simulators(
     antero_speed_var: float,
     retro_speed_mode: float,
     retro_speed_var: float,
+    antero_resample_prob: float,
+    retro_resample_prob: float,
     velocity_noise_var: float,
     fluorophore_count_mode: float,
     fluorophore_count_var: float,
@@ -128,6 +130,8 @@ def create_particle_simulators(
             retro_speed_distr=log_normal_distr(
                 retro_speed_mode, retro_speed_var, rng=rng
             ),
+            antero_resample_prob = antero_resample_prob,
+            retro_resample_prob = retro_resample_prob,
             initial_intensity=initial_intensity_distr(),
             intensity_half_life=intensity_half_life_distr(),
             velocity_noise_distr=partial(
