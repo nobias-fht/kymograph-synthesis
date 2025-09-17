@@ -132,6 +132,7 @@ class Pipeline:
             else:
                 self.load(output_id)  # loads params and existing outputs
         else:
+            self.params = params
             if output_id is None:
                 self.output_id: str | None = self.write_log_manager.create_new_id()
             else:
