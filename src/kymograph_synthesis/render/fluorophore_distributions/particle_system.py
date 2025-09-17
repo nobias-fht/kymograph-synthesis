@@ -27,7 +27,8 @@ class ParticleSystem:
         fluorophore_counts: NDArray,
     ):
         # static path points have to be defined in real world coordinates
-        space_coords = static_path(path_positions)
+        # Squeezing because thickness parameter adds new dimension
+        space_coords = static_path(path_positions).squeeze() 
         return cls(coords=space_coords, fluorophore_counts=fluorophore_counts)
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
