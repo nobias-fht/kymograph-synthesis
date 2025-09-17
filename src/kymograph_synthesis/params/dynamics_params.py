@@ -112,6 +112,18 @@ class DynamicsParams(BaseModel):
     distribution.
     """
 
+    retro_resample_prob: float = 0
+    """
+    Probability per time step that the speed of the particle will be resampled while
+    moving in the retrograde direction.
+    """
+
+    antero_resample_prob: float = 0
+    """
+    Probability per time step that the speed of the particle will be resampled while
+    moving in the anterograde direction.
+    """    
+
     velocity_noise_var: PositiveFloat = Field(
         default_factory=lambda: np.random.uniform(0, 0.4)
     )
