@@ -20,7 +20,7 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
         retro_speed_mode = rng.uniform(0.5, 3)
         retro_speed_var = (rng.uniform(0, 0.05) * retro_speed_mode) ** 2
         fluorophore_count_mode = rng.uniform(300, 600)
-        fluorophore_count_var = (rng.uniform(0, 0.2) * fluorophore_count_mode) ** 2
+        fluorophore_count_var = (rng.uniform(0, 0.3) * fluorophore_count_mode) ** 2
         fluorophore_halflife_mode = rng.uniform(n_steps * 1, n_steps * 3)
         fluorophore_halflife_var = (
             rng.uniform(0, 0.1) * fluorophore_halflife_mode
