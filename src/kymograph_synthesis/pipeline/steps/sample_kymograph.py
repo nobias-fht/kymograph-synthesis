@@ -26,7 +26,8 @@ def sample_kymograph(
     path_length_pixels = sample_path.length()
     n_path_units = int(np.floor(path_length_pixels))
     path_samples = np.linspace(0, 1, n_path_units)
-    coords = sample_path(path_samples)
+    # squeezing because new thickness parameter adds extra dimension
+    coords = sample_path(path_samples).squeeze()
     indices = np.round(coords).astype(int)
 
     if params.interpolation != "none":

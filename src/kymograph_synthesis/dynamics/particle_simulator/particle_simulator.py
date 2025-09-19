@@ -18,25 +18,29 @@ class ParticleSimulator:
         intensity_half_life: float,
         antero_speed_distr: Callable[[], float],
         retro_speed_distr: Callable[[], float],
+        antero_resample_prob: float,
+        retro_resample_prob: float,
         velocity_noise_distr: Callable[[], float],
         transition_matrix: TransitionMatrixType,
-        rng: np.random.Generator
+        rng: np.random.Generator,
     ):
         self._antero_speed_distr = antero_speed_distr
         self._retro_speed_distr = retro_speed_distr
+        self._antero_resample_prob = antero_resample_prob
+        self._retro_resample_prob = retro_resample_prob
         self._velocity_noise_distr = velocity_noise_distr
         self._transition_matrix = transition_matrix
 
         self.state: MotionStateCollection = initial_state
         self.position: float = initial_position
-        self.velocity: float = self.sample_velocity()
+        self.velocity: float = self._sample_velocity()
 
         self.initial_intensity = initial_intensity
         self.intensity = initial_intensity
-        self.intensity_decay_rate = np.log(2)/intensity_half_life
+        self.intensity_decay_rate = np.log(2) / intensity_half_life
 
         self.step_count = 0
-        
+
         self.rng = rng
 
     def step(self):
@@ -49,14 +53,29 @@ class ParticleSimulator:
             -self.intensity_decay_rate * self.step_count
         )
 
-        new_state = self.next_state_transition()
+        self._update_state()
+
+        # probability of resampling velocity
+        if self.state == MotionStateCollection.ANTEROGRADE:
+            resampling_prob = self._antero_resample_prob
+        elif self.state == MotionStateCollection.RETROGRADE:
+            resampling_prob = self._retro_resample_prob
+        else:
+            resampling_prob = None
+
+        if resampling_prob is not None:
+            decision_prob = self.rng.random()
+            if decision_prob <= resampling_prob:
+                self.velocity = self._sample_velocity()
+
+    def _update_state(self):
+        new_state = self._decide_next_state()
         if new_state != self.state:
             self.state = new_state
             # resample velocity
-            self.velocity = self.sample_velocity()
+            self.velocity = self._sample_velocity()
 
-
-    def next_state_transition(self) -> MotionStateCollection:
+    def _decide_next_state(self) -> MotionStateCollection:
         transition_probs = self._transition_matrix[self.state]
 
         decision_prob = self.rng.random()
@@ -65,9 +84,12 @@ class ParticleSimulator:
             cumulative_prob += prob
             if decision_prob <= cumulative_prob:
                 return transition_state
-        print("Should be unreachable")
+        raise RuntimeError(
+            "Something went wrong in the probability calculation, this code should be "
+            "unreachable."
+        )
 
-    def sample_velocity(self) -> float:
+    def _sample_velocity(self) -> float:
         match self.state:
             case MotionStateCollection.STATIONARY:
                 return 0
