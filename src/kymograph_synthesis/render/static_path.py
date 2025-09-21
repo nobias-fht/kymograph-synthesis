@@ -118,7 +118,7 @@ class QuadraticBezierPath:
         # TODO: allow change of n?
         # lengths = self._calc_lengths(n=n)
         total_length = self.length()
-        n = int(total_length) * 4
+        n = int(np.ceil(total_length)) * 4
         lengths = self._calc_lengths(n)
         if len(lengths) == 0:
             return lambda _: np.array([0])
