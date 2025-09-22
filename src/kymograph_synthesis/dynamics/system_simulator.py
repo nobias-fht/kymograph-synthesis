@@ -9,7 +9,11 @@ from .particle_simulator.particle_simulator import (
     TransitionMatrixType,
     ParticleSimulator,
 )
-from .particle_simulator.motion_state_collection import MotionStateCollection, STATE_INDEX_MAPPING
+from .particle_simulator.motion_state_collection import (
+    MotionStateCollection,
+    STATE_INDEX_MAPPING,
+)
+
 
 def calc_markov_stationary_state(
     markov_transition_matrix: TransitionMatrixType, rng: np.random.Generator
@@ -93,18 +97,51 @@ def create_particle_simulators(
     fluorophore_count_var: float,
     fluorophore_halflife_mode: float,
     fluorophore_halflife_var: float,
-    transition_matrix: TransitionMatrixType,
+    transition_matrix: TransitionMatrixType | None,
+    state_ratios: dict[MotionStateCollection, float],
     n_steps: int,
     rng: np.random.Generator,
 ) -> list[ParticleSimulator]:
-    
-    antero_speed_mode = antero_speed_mode*1e-2
-    antero_speed_var = antero_speed_var*1e-2
-    retro_speed_mode = retro_speed_mode*1e-2
-    retro_speed_var = retro_speed_var*1e-2
-    velocity_noise_var = velocity_noise_var*1e-2
 
-    markov_stationary_state = calc_markov_stationary_state(transition_matrix, rng=rng)
+    antero_speed_mode = antero_speed_mode * 1e-2
+    antero_speed_var = antero_speed_var * 1e-2
+    retro_speed_mode = retro_speed_mode * 1e-2
+    retro_speed_var = retro_speed_var * 1e-2
+    velocity_noise_var = velocity_noise_var * 1e-2
+
+    if (transition_matrix is None) and (state_ratios is None):
+        raise ValueError(
+            "One of `transition_matrix` or `state_ratios` must be specified."
+        )
+    elif (transition_matrix is not None) and (state_ratios is not None):
+        raise ValueError(
+            "Only one of `transition_matrix` or `state_ratios` can be specified."
+        )
+    elif transition_matrix is not None:
+        markov_stationary_state = calc_markov_stationary_state(
+            transition_matrix, rng=rng
+        )
+    elif (state_ratios is not None) and (transition_matrix is None):  # state_ratios is not None
+        markov_stationary_state = state_ratios
+        transition_matrix: TransitionMatrixType = {
+            MotionStateCollection.ANTEROGRADE: {
+                MotionStateCollection.ANTEROGRADE: 1,
+                MotionStateCollection.STATIONARY: 0,
+                MotionStateCollection.RETROGRADE: 0,
+            },
+            MotionStateCollection.STATIONARY: {
+                MotionStateCollection.ANTEROGRADE: 0,
+                MotionStateCollection.STATIONARY: 1,
+                MotionStateCollection.RETROGRADE: 0,
+            },
+            MotionStateCollection.RETROGRADE: {
+                MotionStateCollection.ANTEROGRADE: 0,
+                MotionStateCollection.STATIONARY: 0,
+                MotionStateCollection.RETROGRADE: 1,
+            },
+        }
+    else: 
+        raise RuntimeError("Unreachable code.")
 
     approx_travel_distance = max(antero_speed_mode, retro_speed_mode) * n_steps
     buffer_distance = approx_travel_distance * 1.5
@@ -130,15 +167,15 @@ def create_particle_simulators(
             retro_speed_distr=log_normal_distr(
                 retro_speed_mode, retro_speed_var, rng=rng
             ),
-            antero_resample_prob = antero_resample_prob,
-            retro_resample_prob = retro_resample_prob,
+            antero_resample_prob=antero_resample_prob,
+            retro_resample_prob=retro_resample_prob,
             initial_intensity=initial_intensity_distr(),
             intensity_half_life=intensity_half_life_distr(),
             velocity_noise_distr=partial(
                 rng.normal, loc=0, scale=velocity_noise_var**0.5
             ),
             transition_matrix=transition_matrix,
-            rng=rng
+            rng=rng,
         )
         for _ in range(n_particles)
     ]

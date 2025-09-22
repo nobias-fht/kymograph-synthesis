@@ -46,7 +46,11 @@ def antero_var_default_factory(normal_std: PositiveFloat):
     return inner
 
 
-def transition_matrix_default_factory(data: dict[str, Any]) -> TransitionMatrixType:
+def transition_matrix_default_factory(
+    data: dict[str, Any],
+) -> TransitionMatrixType | None:
+    if data["state_ratios"] is not None:
+        return None
     values = np.random.rand(3, 3)
     # unidirectional particles do not transition
     if data["particle_behaviour"] == "unidirectional":
@@ -122,7 +126,7 @@ class DynamicsParams(BaseModel):
     """
     Probability per time step that the speed of the particle will be resampled while
     moving in the anterograde direction.
-    """    
+    """
 
     velocity_noise_var: PositiveFloat = Field(
         default_factory=lambda: np.random.uniform(0, 0.4)
@@ -156,8 +160,10 @@ class DynamicsParams(BaseModel):
         default_factory=lambda: np.random.choice(["unidirectional", "bidirectional"])
     )
 
+    state_ratios: dict[MotionStateCollection, float] | None = None
+
     # TODO: generate transition matrix from unidirectional label
-    transition_matrix: TransitionMatrixType = Field(
+    transition_matrix: TransitionMatrixType | None = Field(
         default_factory=transition_matrix_default_factory
     )
     """
@@ -171,8 +177,10 @@ class DynamicsParams(BaseModel):
     @field_validator("transition_matrix")
     @classmethod
     def validate_transition_probabilities(
-        cls, transition_matrix: TransitionMatrixType
-    ) -> TransitionMatrixType:
+        cls, transition_matrix: TransitionMatrixType | None
+    ) -> TransitionMatrixType | None:
+        if transition_matrix is None:
+            return transition_matrix
         for state, transition_probs in transition_matrix.items():
             probability_sum = sum(transition_probs.values())
             if not isclose(probability_sum, 1):
@@ -184,6 +192,13 @@ class DynamicsParams(BaseModel):
 
     @model_validator(mode="after")
     def validate_particle_behaviour(self) -> Self:
+        if self.transition_matrix is None:
+            if self.particle_behaviour is not "unidirectional":
+                raise ValueError(
+                    "When providing `state_ratios` and not `transition_matrix` the "
+                    "particle behavior should be 'unidirectional'."
+                )
+            return self
         states = [
             MotionStateCollection.ANTEROGRADE,
             MotionStateCollection.STATIONARY,
