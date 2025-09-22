@@ -19,8 +19,10 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
         antero_speed_var = (rng.uniform(0, 0.05) * antero_speed_mode) ** 2
         retro_speed_mode = rng.uniform(0.5, 3)
         retro_speed_var = (rng.uniform(0, 0.05) * retro_speed_mode) ** 2
-        fluorophore_count_mode = rng.uniform(300, 600)
-        fluorophore_count_var = (rng.uniform(0, 0.3) * fluorophore_count_mode) ** 2
+        fluorophore_count_mode_set1 = rng.uniform(300, 600)
+        fluorophore_count_mode_set2 = rng.uniform(300, 600)
+        fluorophore_count_var_set1 = (rng.uniform(0, 0.3) * fluorophore_count_mode_set1) ** 2
+        fluorophore_count_var_set2 = (rng.uniform(0, 0.3) * fluorophore_count_mode_set2) ** 2
         fluorophore_halflife_mode = rng.uniform(n_steps * 1, n_steps * 3)
         fluorophore_halflife_var = (
             rng.uniform(0, 0.1) * fluorophore_halflife_mode
@@ -31,7 +33,7 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
                 "dynamics": [
                     {
                         "particle_behaviour": "unidirectional",
-                        "particle_density": rng.uniform(0.5, 8),
+                        "particle_density": rng.uniform(0.25, 6),
                         "antero_speed_mode": antero_speed_mode,
                         "antero_speed_var": antero_speed_var,
                         "retro_speed_mode": retro_speed_mode,
@@ -39,11 +41,36 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
                         "antero_resample_prob": rng.uniform(0, 0.1),
                         "retro_resample_prob": rng.uniform(0, 0.1),
                         "velocity_noise_var": rng.uniform(0.01**2, 0.05**2),
-                        "fluorophore_count_mode": fluorophore_count_mode,
-                        "fluorophore_count_var": fluorophore_count_var,
+                        "fluorophore_count_mode": fluorophore_count_mode_set1,
+                        "fluorophore_count_var": fluorophore_count_var_set1,
                         "fluorophore_halflife_mode": fluorophore_halflife_mode,
                         "fluorophore_halflife_var": fluorophore_halflife_var,
-                    }
+                        "state_ratios": {
+                            "anterograde": 1,
+                            "stationary": 0,
+                            "retrograde": 0,
+                        },
+                    },
+                    {
+                        "particle_behaviour": "unidirectional",
+                        "particle_density": rng.uniform(0.25, 6),
+                        "antero_speed_mode": antero_speed_mode,
+                        "antero_speed_var": antero_speed_var,
+                        "retro_speed_mode": retro_speed_mode,
+                        "retro_speed_var": retro_speed_var,
+                        "antero_resample_prob": rng.uniform(0, 0.1),
+                        "retro_resample_prob": rng.uniform(0, 0.1),
+                        "velocity_noise_var": rng.uniform(0.01**2, 0.05**2),
+                        "fluorophore_count_mode": fluorophore_count_mode_set2,
+                        "fluorophore_count_var": fluorophore_count_var_set2,
+                        "fluorophore_halflife_mode": fluorophore_halflife_mode,
+                        "fluorophore_halflife_var": fluorophore_halflife_var,
+                        "state_ratios": {
+                            "anterograde": 0,
+                            "stationary": 0,
+                            "retrograde": 1,
+                        },
+                    },
                 ],
                 "rendering": {
                     "static_distributions": [
