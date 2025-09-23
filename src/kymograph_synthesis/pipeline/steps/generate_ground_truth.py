@@ -21,6 +21,7 @@ def generate_ground_truth(
     params: Sequence[GroundTruthFuncParams],
     dynamics_output: DynamicsSimOutput,
     n_spatial_values: int,
+    path_points: list[tuple[float, float, float]],
 ):
     output: GenerateGroundTruthOutput = {}
     for ground_truth_func_params in params:
@@ -31,6 +32,7 @@ def generate_ground_truth(
                     dynamics_output["particle_positions"],
                     dynamics_output["particle_states"],
                     n_spatial_values,
+                    path_points,
                     **ground_truth_func_params.model_dump(exclude={"name"}),
                 )
             case GroundTruthFuncCollection.INSTANCE:
@@ -38,6 +40,7 @@ def generate_ground_truth(
                     generate_instance_ground_truth(
                         dynamics_output["particle_positions"],
                         n_spatial_values,
+                        path_points,
                         **ground_truth_func_params.model_dump(exclude={"name"}),
                     )
                 )

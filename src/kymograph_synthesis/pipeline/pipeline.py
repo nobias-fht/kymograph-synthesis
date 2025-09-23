@@ -218,6 +218,7 @@ class Pipeline:
             self.params.ground_truth_funcs,
             self.dynamics_sim_output,
             n_spatial_values=self.sample_kymograph_output["n_spatial_values"],
+            path_points=self.params.rendering.particle_path_points,
         )
 
     # TODO: rename?
