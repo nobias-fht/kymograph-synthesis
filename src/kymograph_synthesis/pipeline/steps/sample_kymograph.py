@@ -29,6 +29,8 @@ def sample_kymograph(
     # squeezing because new thickness parameter adds extra dimension
     coords = sample_path(path_samples).squeeze()
     indices = np.round(coords).astype(int)
+    in_bounds = np.logical_and((0 <= indices), indices < np.array(frames.shape[1:])).all(axis=1)
+    indices = indices[in_bounds]
 
     if params.interpolation != "none":
         n_spatial_values = int(np.round(n_path_units * params.n_spatial_values_factor))
@@ -42,7 +44,7 @@ def sample_kymograph(
         sample = frames[t, *[indices[:, i] for i in range(indices.shape[1])]]
         if params.interpolation != "none":
             sample = inter_pixel_interp(
-                path_samples,
+                path_samples[in_bounds],
                 indices,
                 sample,
                 interpolation=params.interpolation,

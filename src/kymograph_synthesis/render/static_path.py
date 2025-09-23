@@ -108,9 +108,11 @@ class QuadraticBezierPath:
     def length(self) -> float:
         # TODO: derivative already implemented in tangents, reuse?
         p0, p1, p2 = self.points
+
         def speed(ratio: float):
             tangent = -2 * (1 - ratio) * (p0 - p1) + 2 * ratio * (p2 - p1)
             return np.linalg.norm(tangent)
+
         length, _ = quad(speed, 0.0, 1.0)
         return length
 
@@ -166,8 +168,8 @@ class PiecewiseQuadraticBezierPath:
         self.segment_lengths = self._segment_lengths()
         self.total_length = sum(self.segment_lengths)
 
-        self.segment_ratio_bins = np.concatenate(
-            [np.array([0]), np.cumsum(self.segment_lengths) / self.total_length]
+        self.segment_ratio_bins = (
+            np.cumsum(self.segment_lengths[:-1]) / self.total_length
         )
 
     def __call__(
@@ -176,9 +178,7 @@ class PiecewiseQuadraticBezierPath:
         if (thickness > 1) and (self.dims != 2):
             raise NotImplementedError("Cannot give a thickness for dims != 2.")
 
-        segment_labels = np.digitize(
-            ratio, bins=self.segment_ratio_bins[1:], right=True
-        )
+        segment_labels = np.digitize(ratio, bins=self.segment_ratio_bins, right=True)
         result = np.zeros(
             (*ratio.shape, thickness, self.dims)
         )  # initialize place holder
@@ -186,7 +186,11 @@ class PiecewiseQuadraticBezierPath:
             path_segment = self.path_segments[n]
             segment_ratios = ratio[segment_labels == n]
             # scale correctly
-            segment_ratios = (segment_ratios - self.segment_ratio_bins[n]) * (
+            if n == 0:
+                scaled_start = 0
+            else:
+                scaled_start = self.segment_ratio_bins[n - 1]
+            segment_ratios = (segment_ratios - scaled_start) * (
                 self.total_length / self.segment_lengths[n]
             )
 
