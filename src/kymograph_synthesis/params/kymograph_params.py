@@ -10,15 +10,4 @@ class KymographParams(BaseModel):
 
     n_spatial_values_factor: float = 1.2
 
-    interpolation: Literal[
-        "none",
-        "linear",
-        "nearest",
-        "nearest-up",
-        "zero",
-        "slinear",
-        "quadratic",
-        "cubic",
-        "previous",
-        "next",
-    ] = "cubic"
+    interpolation: Literal[0, 1, 2, 3, 4, 5] = 3
