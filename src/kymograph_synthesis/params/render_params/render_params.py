@@ -90,7 +90,7 @@ def _random_relative_particle_path_points(
         x[-1] = np.random.uniform(x[0] + 0.5, 0.9)
 
     y = np.random.uniform(0.1, 0.9, n_points)
-    z = np.random.normal(0.5, 0.2, n_points)
+    z = np.random.normal(0.5, 0.15, n_points)
     z_out_of_frame = np.logical_or(z < 0, z > 1)
     z[z_out_of_frame] = np.random.uniform(0.05, 0.95, np.count_nonzero(z_out_of_frame))
 
