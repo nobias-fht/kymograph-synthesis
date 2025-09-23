@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from typing import Any
+from functools import partial
 
 from pydantic import (
     BaseModel,
@@ -16,13 +17,13 @@ from .imaging_params import ImagingParams
 
 
 def _particle_path_points_default_factory(
-    data: dict[str, Any]
-) -> list[tuple[float, float, float]]:
+    data: dict[str, Any], n_points: int
+) -> Sequence[tuple[float, float, float]]:
     imaging_params = data["imaging"]
     assert isinstance(imaging_params, ImagingParams)
     truth_space_shape = imaging_params.truth_space.shape
     truth_space_scale = imaging_params.truth_space.scale
-    relative_path_points = _random_relative_particle_path_points()
+    relative_path_points = _random_relative_particle_path_points(n_points)
     return _convert_relative_to_um(
         relative_path_points, truth_space_shape, truth_space_scale
     )
@@ -38,8 +39,8 @@ class RenderingParams(BaseModel):
 
     imaging: ImagingParams
 
-    particle_path_points: list[tuple[float, float, float]] = Field(
-        default_factory=_particle_path_points_default_factory
+    particle_path_points: Sequence[tuple[float, float, float]] = Field(
+        default_factory=partial(_particle_path_points_default_factory, n_points=4)
     )
 
     """Points that create the path the particles are rendered on."""
@@ -79,8 +80,9 @@ class RenderingParams(BaseModel):
         return data
 
 
-def _random_relative_particle_path_points() -> list[tuple[float, float, float]]:
-    n_points = 4
+def _random_relative_particle_path_points(
+    n_points: int
+) -> list[tuple[float, float, float]]:
     x = np.zeros(n_points, dtype=float)
     x[0] = np.random.uniform(0.1, 0.3)
     x[1:] = np.sort(np.random.uniform(x[0], 0.9, n_points - 1))
