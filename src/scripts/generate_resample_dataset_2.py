@@ -37,7 +37,7 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
             rng.uniform(0, 0.1) * fluorophore_halflife_mode
         ) ** 2
         truth_shape = (32, 32, 768)
-        x_scale = rng.choice([0.016, 0.018, 0.020, 0.022, 0.024, 0.026, 0.028, 0.03, 0.032])
+        x_scale = rng.choice([0.016, 0.018, 0.020, 0.022, 0.026, 0.028, 0.03, 0.032])
         truth_scale = (x_scale*2, x_scale, x_scale)
 
         params = Params.model_validate(
