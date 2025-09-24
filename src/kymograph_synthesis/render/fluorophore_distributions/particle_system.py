@@ -53,5 +53,5 @@ class ParticleSystem:
             self.intensities[~out_of_bounds],
         )
 
-        space += space_numpy
+        space += xp.asarray(space_numpy)
         return space

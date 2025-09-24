@@ -25,7 +25,7 @@ class SimplexNoise:
 
     def render(self, space: xrDataArray, xp: ms.NumpyAPI | None = None) -> xrDataArray:
         truth_space = cast(ms.space.Space, space.attrs["space"])
-        space += self.noise_array(dims=space.shape, scale=truth_space.scale)
+        space += xp.asarray(self.noise_array(dims=space.shape, scale=truth_space.scale))
         return space
 
 
