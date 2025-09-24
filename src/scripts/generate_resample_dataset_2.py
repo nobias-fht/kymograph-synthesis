@@ -1,6 +1,7 @@
 from typing import Optional
 import argparse
 from pathlib import Path
+from pprint import pprint
 
 import numpy as np
 
@@ -36,7 +37,7 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
             rng.uniform(0, 0.1) * fluorophore_halflife_mode
         ) ** 2
         truth_shape = (32, 32, 768)
-        x_scale = rng.choice(np.arange(0.016, 0.025, 0.002))
+        x_scale = rng.choice([0.016, 0.018, 0.020, 0.022, 0.024, 0.026, 0.028, 0.03, 0.032])
         truth_scale = (x_scale*2, x_scale, x_scale)
 
         params = Params.model_validate(
@@ -117,8 +118,10 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
                     },
                 },
                 "kymograph": {"n_spatial_values_factor": rng.uniform(0.8, 1.6)},
+                "settings": {"np_backend": "cupy"}
             }
         )
+        pprint(params.model_dump(mode="json"), indent=2)
         if seed is not None:
             if isinstance(params.dynamics, DynamicsParams):
                 params.dynamics.seed = seed
