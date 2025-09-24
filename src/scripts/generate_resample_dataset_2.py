@@ -24,8 +24,8 @@ def main(output_dir: Path, n_kymographs: int, seed: Optional[int]):
         antero_speed_var = (rng.uniform(0, 0.05) * antero_speed_mode) ** 2.5
         retro_speed_mode = rng.uniform(0.5, 3)
         retro_speed_var = (rng.uniform(0, 0.05) * retro_speed_mode) ** 2.5
-        fluorophore_count_mode_set1 = rng.uniform(300, 600)
-        fluorophore_count_mode_set2 = rng.uniform(300, 600)
+        fluorophore_count_mode_set1 = rng.uniform(200, 600)
+        fluorophore_count_mode_set2 = rng.uniform(200, 600)
         fluorophore_count_var_set1 = (
             rng.uniform(0, 0.3) * fluorophore_count_mode_set1
         ) ** 2
