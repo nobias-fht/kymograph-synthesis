@@ -32,8 +32,9 @@ class Params(BaseModel):
 
     kymograph: KymographParams
 
+    # TODO: add validation for sample path points projecting to xy makes sense
     ground_truth_funcs: list[GroundTruthFuncParams] = Field(
-        default=[StateGroundTruth()]
+        default=[StateGroundTruth(project_to_xy=True)]
     )
 
     version: str = Field(default_factory=find_version)
