@@ -46,7 +46,9 @@ def generate_instance_ground_truth(
     project_to_xy: bool,
 ):
     if project_to_xy:
-        particle_positions = _project_positions_to_xy(particle_positions, path_points)
+        particle_positions = _project_positions_to_xy(
+            particle_positions, path_points, n_spatial_values
+        )
     n_steps, n_particles = particle_positions.shape
     kymograph_gt = np.zeros(((n_steps, n_spatial_values, n_particles)), dtype=np.uint8)
     particle_positions_pixels = particle_positions * n_spatial_values

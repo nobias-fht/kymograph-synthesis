@@ -40,10 +40,12 @@ class RenderingParams(BaseModel):
     imaging: ImagingParams
 
     particle_path_points: Sequence[tuple[float, float, float]] = Field(
-        default_factory=partial(_particle_path_points_default_factory, n_points=4)
+        default_factory=lambda data: _particle_path_points_default_factory(
+            data, n_points=4
+        )
     )
-
     """Points that create the path the particles are rendered on."""
+    
     static_distributions: list[FluoroDistrParams] = Field(
         default=[
             SimplexNoiseParams(
@@ -81,7 +83,7 @@ class RenderingParams(BaseModel):
 
 
 def _random_relative_particle_path_points(
-    n_points: int
+    n_points: int,
 ) -> list[tuple[float, float, float]]:
     x = np.zeros(n_points, dtype=float)
     x[0] = np.random.uniform(0.1, 0.3)

@@ -46,7 +46,7 @@ def simulate_imaging(
         )
         # copy so that saved seed won't be the seed + t
         settings = params.imaging.settings.model_copy()
-        settings.random_seed = rng.integers(0, 2**5)
+        settings.random_seed = rng.integers(0, 2**32)
         fluro_distributions = [
             ms.FluorophoreDistribution(distribution=distr)
             for distr in static_distributions
