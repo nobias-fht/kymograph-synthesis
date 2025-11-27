@@ -28,6 +28,7 @@ def simulate_imaging(
     seed = params.imaging.settings.random_seed
     if seed is None:
         raise ValueError("Random seed for microsim must be set.")
+    rng = np.random.default_rng(seed)
 
     static_distributions = initialize_static_distributions(params.static_distributions)
     output_space_shape = params.imaging.output_space.shape
@@ -45,21 +46,24 @@ def simulate_imaging(
         )
         # copy so that saved seed won't be the seed + t
         settings = params.imaging.settings.model_copy()
-        settings.random_seed = seed + t
-        fluro_distributions = [ms.FluorophoreDistribution(distribution=distr) for distr in static_distributions]
-        fluro_distributions.append(ms.FluorophoreDistribution(distribution=particle_system))
+        settings.random_seed = rng.integers(0, 2**5)
+        fluro_distributions = [
+            ms.FluorophoreDistribution(distribution=distr)
+            for distr in static_distributions
+        ]
+        fluro_distributions.append(
+            ms.FluorophoreDistribution(distribution=particle_system)
+        )
         sim = ms.Simulation(
             **params.imaging.model_dump(exclude={"settings"}),
             settings=settings,
             sample=ms.Sample(labels=fluro_distributions),
         )
-        frames[t] = sim.digital_image()
+        frames[t] = sim.digital_image().data.get()
     return ImagingSimOutput(frames=frames, path_length_um=static_path.length())
 
 
-def fluoro_distr_factory(
-    *, name: FluoroDistrName, **kwargs
-) -> AnyDistribution:
+def fluoro_distr_factory(*, name: FluoroDistrName, **kwargs) -> AnyDistribution:
     match name:
         case FluoroDistrName.SIMPLEX_NOISE:
             return SimplexNoise(**kwargs)
