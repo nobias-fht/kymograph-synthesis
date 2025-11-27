@@ -2,6 +2,7 @@ from typing import Generator
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.interpolate import interp1d
 
 from kymograph_synthesis.render.static_path import PiecewiseQuadraticBezierPath
 
@@ -16,7 +17,9 @@ def generate_state_ground_truth(
     project_to_xy: bool,
 ):
     if project_to_xy:
-        particle_positions = _project_positions_to_xy(particle_positions, path_points)
+        particle_positions = _project_positions_to_xy(
+            particle_positions, path_points, n_spatial_values
+        )
 
     n_steps = particle_positions.shape[0]
 
@@ -61,46 +64,26 @@ def generate_instance_ground_truth(
 def _project_positions_to_xy(
     particle_positions: NDArray[np.float_],
     path_points: list[tuple[float, float, float]],
+    n_spatial_values: int,
 ) -> NDArray[np.float_]:
     static_path = PiecewiseQuadraticBezierPath(
         [np.array(point) for point in path_points]
     )
-    projected_path_points = []
-    for point in path_points:
-        point = (0, *point[1:])
-        projected_path_points.append(np.array(point))
-    projected_path = static_path
 
-    particle_coords = static_path(particle_positions).squeeze()
-    velocity = particle_coords[1:] - particle_coords[:-1]
+    sample_points = static_path(np.linspace(0, 1, n_spatial_values))
+    d = sample_points[1:] - sample_points[:-1]
+    mag = np.linalg.norm(d, axis=-1)
+    adjacent = (d[..., 2] ** 2 + d[..., 1] ** 2) ** 0.5
+    theta = np.arctan2(d[..., 0], adjacent)
+    projected_mag = mag * np.cos(theta)
 
-    adjacent = (velocity[..., 2] ** 2 + velocity[..., 1] ** 2) ** 0.5
-    theta = np.arctan2(velocity[..., 0], adjacent)
-    speed = np.linalg.norm(velocity, axis=-1)
-    projected_speed = speed * np.cos(theta)
-    direction = np.sign(particle_positions[1:] - particle_positions[:-1])
-
-    # have to rescale positions because of inaccurate calculations for out of bounds movement
-    initial_positions = particle_positions[0]
-    new_position = np.tile(initial_positions, (particle_positions.shape[0], 1))
-    new_position[1:] = new_position[1:] + np.cumsum(
-        projected_speed * direction / projected_path.length(), axis=0
+    interp_f = interp1d(
+        np.linspace(0, 1, n_spatial_values),
+        np.concatenate([[0], np.cumsum(projected_mag) / np.sum(projected_mag)]),
+        fill_value="extrapolate",
     )
-    in_bounds = np.logical_and(0 <= particle_positions, particle_positions <= 1)
-    for p in range(particle_positions.shape[1]):
-        if not in_bounds[:, p].any():
-            continue
-        target_min = particle_positions[:, p][in_bounds[:, p]].min()
-        target_max = particle_positions[:, p][in_bounds[:, p]].max()
-        min_ = new_position[:, p][in_bounds[:, p]].min()
-        max_ = new_position[:, p][in_bounds[:, p]].max()
-
-        new_position[:, p] = (
-            (new_position[:, p] * (target_max - target_min) / (max_ - min_))
-            - min_
-            + target_min
-        )
-    return new_position
+    new_positions = interp_f(particle_positions)
+    return new_positions
 
 
 def _calc_line_indices(
