@@ -59,7 +59,7 @@ def simulate_imaging(
             settings=settings,
             sample=ms.Sample(labels=fluro_distributions),
         )
-        frames[t] = sim.digital_image().data.get()
+        frames[t] = sim.digital_image().as_numpy()
     return ImagingSimOutput(frames=frames, path_length_um=static_path.length())
 
 

@@ -370,7 +370,7 @@ class Pipeline:
         raw_frames = self.imaging_sim_output["frames"][:, z_index]
         norm = Normalize(vmin=raw_frames.min(), vmax=raw_frames.max())
         cmap = cm.get_cmap("gray")
-        visual_frames: NDArray[np.float_] = cmap(norm(raw_frames))
+        visual_frames: NDArray[np.float64] = cmap(norm(raw_frames))
         images = [
             Image.fromarray(
                 (_resize_image(frame, factor=4) * 255).astype(np.uint8), mode="RGBA"

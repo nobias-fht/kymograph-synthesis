@@ -183,7 +183,7 @@ def create_particle_simulators(
 
 def run_dynamics_simulation(
     n_steps: int, particle_simulators: list[ParticleSimulator]
-) -> tuple[NDArray[np.float_], NDArray[np.float_], NDArray[np.int_]]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.int_]]:
     n_particles = len(particle_simulators)
     positions = np.zeros((n_steps, n_particles))
     intensities = np.zeros((n_steps, n_particles))
