@@ -14,6 +14,11 @@ source = "vcs"
 only-include = ["src"]
 sources = ["src"]
 
+[tool.uv]
+prerelease = "allow"
+
+
+
 # https://peps.python.org/pep-0621/
 [project]
 name = "kymograph_synthesis"
@@ -21,10 +26,35 @@ dynamic = ["version"]
 authors = [
   {name = "Melisande Croft", email = "melisande.croft@fht.org"}
 ]
+requires-python = ">= 3.11"
 
 dependencies = [
-    "numpy",
-    "microsim",
+    "numpy<2",
     "opensimplex",
     "pydantic>=2.10",
+    "pyyaml>=6.0.3",
+    "pillow>=12.0.0",
+    "matplotlib>=3.10.7",
+    "microsim",
 ]
+
+[dependency-groups]
+cuda = [
+    "cuda-toolkit[all]>=13.0.1",
+    "cupy-cuda12x>=14.0.0a1",
+    "cutensor-cu12>=2.3.1",
+    "nvidia-nccl-cu12>=2.28.9",
+]
+dev = [
+    "ipykernel>=7.1.0",
+    "jupyter>=1.1.1",
+]
+[[tool.uv.index]]
+name = "cupy-pre"
+url = "https://pip.cupy.dev/pre"
+format = "flat"
+explicit = true  # optional, but often useful to avoid polluting PyPI resolution
+
+[tool.uv.sources]
+cupy-cuda12x = { index = "cupy-pre" }
+microsim = { git = "https://github.com/melisande-c/microsim.git", branch = "fix/cupy" }
