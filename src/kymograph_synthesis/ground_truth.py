@@ -8,7 +8,7 @@ from kymograph_synthesis.render.static_path import PiecewiseQuadraticBezierPath
 
 
 def generate_state_ground_truth(
-    particle_positions: NDArray[np.float_],
+    particle_positions: NDArray[np.float64],
     particle_states: NDArray[np.int_],
     n_spatial_values: int,
     path_points: list[tuple[float, float, float]],
@@ -38,7 +38,7 @@ def generate_state_ground_truth(
 
 
 def generate_instance_ground_truth(
-    particle_positions: NDArray[np.float_],
+    particle_positions: NDArray[np.float64],
     n_spatial_values: int,
     path_points: list[tuple[float, float, float]],
     *,
@@ -64,10 +64,10 @@ def generate_instance_ground_truth(
 
 
 def _project_positions_to_xy(
-    particle_positions: NDArray[np.float_],
+    particle_positions: NDArray[np.float64],
     path_points: list[tuple[float, float, float]],
     n_spatial_values: int,
-) -> NDArray[np.float_]:
+) -> NDArray[np.float64]:
     static_path = PiecewiseQuadraticBezierPath(
         [np.array(point) for point in path_points]
     )

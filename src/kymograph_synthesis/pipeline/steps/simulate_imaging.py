@@ -22,8 +22,8 @@ class ImagingSimOutput(TypedDict):
 def simulate_imaging(
     params: RenderingParams,
     n_steps: int,
-    particle_positions: NDArray[np.float_],
-    particle_fluorophore_count: NDArray[np.float_],
+    particle_positions: NDArray[np.float64],
+    particle_fluorophore_count: NDArray[np.float64],
 ) -> ImagingSimOutput:
     seed = params.imaging.settings.random_seed
     if seed is None:
@@ -83,8 +83,8 @@ def initialize_static_distributions(
 def initialize_particle_system(
     time_point: int,
     static_path: PiecewiseQuadraticBezierPath,
-    particle_positions: NDArray[np.float_],
-    particle_fluorophore_count: NDArray[np.float_],
+    particle_positions: NDArray[np.float64],
+    particle_fluorophore_count: NDArray[np.float64],
 ) -> ParticleSystem:
     return ParticleSystem.on_static_path(
         static_path,
