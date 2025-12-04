@@ -28,7 +28,6 @@ def projection(volume: NDArray[np.uint16], method:  Literal["mean", "max", "cent
 def sample_kymograph(
     params: KymographParams,
     frames: NDArray[np.uint16],
-    projection_method: Literal["mean", "max", "centre_slice"]
 ) -> SampleKymographOutput:
     # - 0.5 for map_coordinates (centre vs edge of pixel)
     sample_path_points = [np.array(point) - 0.5 for point in params.sample_path_points]
@@ -44,7 +43,7 @@ def sample_kymograph(
     kymograph = np.zeros((n_time_samples, n_spatial_values), dtype=frames.dtype)
     coords = sample_path(path_samples).squeeze()
     for t in range(n_time_samples):
-        image = projection(frames[t], projection_method)
+        image = projection(frames[t], params.projection_method)
         kymograph[t] = map_coordinates(
             image, coords[:, 1:].T, order=params.interpolation
         )
