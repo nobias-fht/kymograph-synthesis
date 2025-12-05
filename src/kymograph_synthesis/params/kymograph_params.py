@@ -11,3 +11,5 @@ class KymographParams(BaseModel):
     n_spatial_values_factor: float = 1.2
 
     interpolation: Literal[0, 1, 2, 3, 4, 5] = 3
+
+    projection_method: Literal["mean", "max", "centre_slice"]

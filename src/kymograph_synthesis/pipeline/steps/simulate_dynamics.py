@@ -10,8 +10,8 @@ from ...dynamics.particle_simulator.particle_simulator import ParticleSimulator
 
 class DynamicsSimOutput(TypedDict):
     n_steps: int
-    particle_positions: NDArray[np.float_]
-    particle_fluorophore_count: NDArray[np.float_]
+    particle_positions: NDArray[np.float64]
+    particle_fluorophore_count: NDArray[np.float64]
     particle_states: NDArray[np.int_]
 
 
